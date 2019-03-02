@@ -58,7 +58,7 @@ class KNN:
         :param X_new:
         :return: ndarray cosine similarity of X_new versus all other points X.
         """
-        return np.dot(self.X, X_new.T) / (norm(self.X, 2) * norm(X_new, 2))
+        return np.dot(self.X, X_new.T) / (norm(self.X, 2, axis=1) * norm(X_new, 2))
 
     def predict(self, X_new):
         assert type(X_new) is np.ndarray, "Use numpy array instead."
@@ -81,8 +81,26 @@ class KNN:
         return choose
 
 
-if __name__ == '__main__':
-    k = 5
+def experiment(X, y, X_test, y_test):
+    print("--- Experiment ---")
+    ks = [1, 3, 5, 7, 9, 11]
+    metrics = ['manhattan', 'euclidean', 'cosine']
+    for metric in metrics:
+        for k in ks:
+            knn = KNN(k, X, y, metric=metric)
+
+            y_pred = []
+            for i in range(X_test.shape[0]):
+                pred = knn.predict(X_test[i].reshape((1, 2)))
+                y_pred.append(pred)
+
+            y_pred = np.asarray(y_pred)
+
+            print("KNN with K = %d and metric = %s | Accuracy: %f" % (k, metric, len(y_test[y_pred == y_test]) / len(y_test)))
+        print("-"*50)
+
+
+def main():
     df = pd.read_csv("./data/train.csv")
     X = df.loc[:, :].values
     y = pd.read_csv("./data/trainDirection.csv").iloc[:, 0].values
@@ -90,14 +108,22 @@ if __name__ == '__main__':
     print("X shape:", X.shape)
     print("y shape:", y.shape)
 
-    knn = KNN(k, X, y, metric='manhattan')
-
     df_test = pd.read_csv("./data/testing.csv")
     X_test = df_test.drop('Direction', axis=1).iloc[:, 1:].values
     y_test = df_test.loc[:, 'Direction'].values
 
     print("X test shape:", X_test.shape)
     print("y test shape:", y_test.shape)
+
+    debug = True
+
+    if debug:
+        experiment(X, y, X_test, y_test)
+        return
+
+    k = 1
+
+    knn = KNN(k, X, y, metric='manhattan')
 
     y_pred = []
     for i in range(X_test.shape[0]):
@@ -108,10 +134,14 @@ if __name__ == '__main__':
 
     print("My KNN accuracy:", len(y_test[y_pred == y_test]) / len(y_test))
 
-    sk_knn = KNeighborsClassifier(n_neighbors=5, metric='manhattan')
+    # Check with Sk learn KNN.
+    sk_knn = KNeighborsClassifier(n_neighbors=k, metric='manhattan')
     sk_knn.fit(X, y)
 
     y_sk = sk_knn.predict(X_test)
 
     print("Sk-learn KNN accuracy:", len(y_test[y_sk == y_test]) / len(y_test))
 
+
+if __name__ == '__main__':
+    main()

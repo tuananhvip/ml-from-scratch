@@ -42,6 +42,7 @@ class DecisionTree:
         self.y_train = y_train
         self.criterion = criterion
         self.num_class = np.unique(self.y_train)
+        self.used = []
 
     def _build_dt(self, root):
         # loop through features
@@ -49,17 +50,24 @@ class DecisionTree:
         N, D = self.X_train.shape
         best = None
         for d in range(D):
+            if d in self.used:
+                continue
             feature = self.X_train[:, d]
-            n = len(feature)
+            num_training = len(feature)
             # if category? then count
             categories = np.unique(feature)
+            entropy_feature = 0
             for category in categories:
                 # for each category in that feature
+                num_category = len(feature[feature == category])
                 for c in self.num_class:
                     # count the number of each class
-                    v = len(feature[np.logical_and(feature == category, self.y_train == c)])
+                    num_category_training = len(feature[np.logical_and(feature == category, self.y_train == c)])
                     # compute entropy/information gain or classification error
-                    entropy = - v/n * log2(v/n)
+                    if self.criterion == 'ig':
+                        entropy_feature += num_category/num_training * self._entropy(num_category, num_category_training)
+                    else:
+                        pass
 
     def _train(self):
         self.tree = NodeDT(self.y_train)

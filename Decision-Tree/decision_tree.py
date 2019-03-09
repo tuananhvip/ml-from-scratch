@@ -91,6 +91,7 @@ class DecisionTree:
         categories = np.unique(feature)
         for category in categories:
             node = NodeDT(feature[feature == category])
+            node.used += root.used
             if not self._stop(node):
                 self._build_dt(node)
             else:

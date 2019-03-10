@@ -15,6 +15,7 @@ class NodeDT:
         self.X = X
         self.y = y
         self.is_leaf = False
+        self.label = 0
         self.used = []
 
     def entropy(self):
@@ -37,7 +38,6 @@ class DecisionTree:
         ....
         - At any level, the number of elements in the set reduces corresponding to that chosen feature.
     """
-    _metrics = {'ce': '_classification_error', 'ig': '_information_gain'}
 
     def __init__(self, criterion='ce'):
         self.criterion = criterion
@@ -72,7 +72,7 @@ class DecisionTree:
                     num_category_class = len(feature[np.logical_and(feature == category, root.y == c)])
                     # compute entropy/information gain or classification error
                     if self.criterion == 'ig':
-                        entropy_feature += num_category/N * self._entropy(num_category, num_category_class)
+                        entropy_feature += num_category/N * (-num_category_class/num_category * log2(num_category_class/num_category))
                     else:
                         pass
             if self.criterion == 'ig':
@@ -86,10 +86,10 @@ class DecisionTree:
         # loop through all its categories to build subtree
         feature = root.X[:, best_feature]
         categories = np.unique(feature)
-        for i, category in enumerate(categories):
+        for category in categories:
             node = NodeDT(root.X[feature == category], root.y[feature == category])
             node.used = root.used + [best_feature]
-            setattr(root, 'child_' + str(i), node)
+            setattr(root, category, node)
             if not self._stop(node):
                 self._build_dt(node)
             else:

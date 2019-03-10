@@ -11,16 +11,17 @@ class NodeDT:
     Class Node represents in Decision Tree
     """
 
-    def __init__(self, X_feature):
-        self.X_feature = X_feature
+    def __init__(self, X, y):
+        self.X = X
+        self.y = y
         self.is_leaf = False
         self.used = []
 
     def entropy(self):
-        n = len(self.X_feature)
+        n = len(self.X)
         sum_ = 0
-        for i in np.unique(self.X_feature):
-            v = len(self.X_feature[self.X_feature == i])
+        for i in np.unique(self.X):
+            v = len(self.X[self.X == i])
             sum_ += -((v/n) * log2(v/n))
         return sum_
 
@@ -38,11 +39,8 @@ class DecisionTree:
     """
     _metrics = {'ce': '_classification_error', 'ig': '_information_gain'}
 
-    def __init__(self, X_train, y_train, criterion='ce'):
-        self.X_train = X_train
-        self.y_train = y_train
+    def __init__(self, criterion='ce'):
         self.criterion = criterion
-        self.num_class = np.unique(self.y_train)
 
     def _build_dt(self, root):
         # loop through features
@@ -50,20 +48,19 @@ class DecisionTree:
         """
         Algorithm:
             - Start from the root. Find the best feature that has optimum entropy/information gain or classification error.
-            - From that best feature, loop through all categories in to build subtree.
+            - From that best feature, loop through all categories to build subtree.
             - If entropy/classification erorr is 0, or reach all features then that node is leaf, stop and move to
                 other subtrees
         :param root:
         :return:
         """
-        N, D = self.X_train.shape
+        N, D = root.X.shape
         best_coef = 0.0
         best_feature = 0
         for d in range(D):
             if d in root.used:
                 continue
-            feature = self.X_train[:, d]
-            num_training = len(feature)
+            feature = root.X[:, d]
             # if category? then count
             categories = np.unique(feature)
             entropy_feature = 0
@@ -72,14 +69,12 @@ class DecisionTree:
                 num_category = len(feature[feature == category])
                 for c in self.num_class:
                     # count the number of each class
-                    num_category_training = len(feature[np.logical_and(feature == category, self.y_train == c)])
+                    num_category_class = len(feature[np.logical_and(feature == category, root.y == c)])
                     # compute entropy/information gain or classification error
                     if self.criterion == 'ig':
-                        entropy_feature += num_category/num_training * self._entropy(num_category, num_category_training)
+                        entropy_feature += num_category/N * self._entropy(num_category, num_category_class)
                     else:
                         pass
-            # after choose the best feature to split.
-            # loop through all its categories to build subtree
             if self.criterion == 'ig':
                 information_gain = root.entropy() - entropy_feature
                 if best_coef < information_gain:
@@ -87,23 +82,47 @@ class DecisionTree:
                     best_feature = d
             else:
                 pass
-        feature = self.X_train[:, best_feature]
+        # after choose the best feature to split.
+        # loop through all its categories to build subtree
+        feature = root.X[:, best_feature]
         categories = np.unique(feature)
-        for category in categories:
-            node = NodeDT(feature[feature == category])
-            node.used += root.used
+        for i, category in enumerate(categories):
+            node = NodeDT(root.X[feature == category], root.y[feature == category])
+            node.used = root.used + [best_feature]
+            setattr(root, 'child_' + str(i), node)
             if not self._stop(node):
                 self._build_dt(node)
             else:
                 node.is_leaf = True
 
-
-    def _train(self):
-        self.tree = NodeDT(self.y_train)
+    def _train(self, X_train, y_train):
+        self.tree = NodeDT(X_train, y_train)
         self._build_dt(self.tree)
 
-    def train(self):
-        pass
+    def _is_numerical(self, feature):
+        return len(np.unique(feature)) >= 100
+
+    def _convert_numerical_to_categorical(self, feature, y_train, num_class):
+        """
+        :param feature:
+        :param num_class:
+        :return:
+        """
+        assert num_class == 2, "This function only assumes work with binary classification."
+        feature = sorted(feature)
+        best_threshold = 0.0
+        for i in range(len(feature)-1):
+            threshold = (feature[i] + feature[i+1]) / 2
+            feature[feature < threshold]
+
+    def train(self, X_train, y_train):
+        self.num_class = np.unique(y_train)
+        _, D = X_train.shape
+        for d in range(D):
+            feature = X_train[:, d]
+            if self._is_numerical(feature):
+                X_train[:, d] = self._convert_numerical_to_categorical(feature, y_train, self.num_class)
+        self._train(X_train, y_train)
 
     def _entropy(self, n, v):
         """
@@ -128,5 +147,14 @@ class DecisionTree:
         pass
 
 
+if __name__ == '__main__':
+    import pandas as pd
+
+    df = pd.read_csv('data/titanic_train.csv')
+    X = df.loc[:, :].drop(['Survived', 'PassengerId'], axis=1).values
+    y = df.loc[:, 'Survived'].values
+
+    dt = DecisionTree(criterion='ig')
+    dt.train(X, y)
 
 

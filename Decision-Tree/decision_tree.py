@@ -144,8 +144,8 @@ class DecisionTree:
             - If entropy of that node is 0
         :return:
         """
-        pass
-
+        return len(node.used) == node.X.shape[1] or node.entropy() == 0
+    
 
 if __name__ == '__main__':
     import pandas as pd

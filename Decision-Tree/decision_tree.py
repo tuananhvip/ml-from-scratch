@@ -19,10 +19,10 @@ class NodeDT:
         self.used = []
 
     def entropy(self):
-        n = len(self.X)
+        n = len(self.y)
         sum_ = 0
-        for i in np.unique(self.X):
-            v = len(self.X[self.X == i])
+        for i in np.unique(self.y):
+            v = len(self.y[self.y == i])
             sum_ += -((v/n) * log2(v/n))
         return sum_
 
@@ -124,6 +124,8 @@ class DecisionTree:
         is_positive_negative = False
         sorted_feature = sorted(np.unique(feature))
         for i in range(len(sorted_feature)-1):
+            if i == 270:
+                print("AA")
             # assume the value less than threshold is negative (0), greater than threshold is positive (1)
             threshold = (sorted_feature[i] + sorted_feature[i+1]) / 2
             left_partition = y_train[feature < threshold]
@@ -141,6 +143,8 @@ class DecisionTree:
                 best_threshold = threshold
         feature[feature < best_threshold] = int(is_positive_negative)
         feature[feature > best_threshold] = int(not is_positive_negative)
+        print(len(y_train[y_train == 1]))
+        print(len(y_train[y_train == 0]))
         return feature
 
     def train(self, X_train, y_train):

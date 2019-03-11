@@ -39,7 +39,8 @@ class DecisionTree:
         - At any level, the number of elements in the set reduces corresponding to that chosen feature.
     """
 
-    def __init__(self, criterion='ce'):
+    def __init__(self, max_depth=5, criterion='ce'):
+        self.max_depth = max_depth
         self.criterion = criterion
 
     def _build_dt(self, root):
@@ -104,16 +105,43 @@ class DecisionTree:
 
     def _convert_numerical_to_categorical(self, feature, y_train, num_class):
         """
-        :param feature:
-        :param num_class:
-        :return:
+        The main point is find a good threshold that optimal split label.
+        A good threshold is the threshold that minimize mis-classification error.
+
+        The algorithm:
+            - If there are `n` data points in feature data => there are `n-1` available thresholds.
+            - For each available threshold, split feature data to 2 partitions.
+            - For each partition, we check and compute mis-classification error for each label.
+
+        :param feature: numerical value feature.
+        :param y_train: label.
+        :param num_class: number of class
+        :return: categorical value of `feature`.
         """
-        assert num_class == 2, "This function only assumes work with binary classification."
-        feature = sorted(feature)
+        assert len(num_class) == 2, "This function only assumes work with binary classification."
         best_threshold = 0.0
-        for i in range(len(feature)-1):
-            threshold = (feature[i] + feature[i+1]) / 2
-            feature[feature < threshold]
+        max_exact_classification = 0.0
+        is_positive_negative = False
+        sorted_feature = sorted(np.unique(feature))
+        for i in range(len(sorted_feature)-1):
+            # assume the value less than threshold is negative (0), greater than threshold is positive (1)
+            threshold = (sorted_feature[i] + sorted_feature[i+1]) / 2
+            left_partition = y_train[feature < threshold]
+            right_partition = y_train[feature > threshold]
+            negative_positive = (len(left_partition[left_partition == 0]) / len(left_partition)
+                                 + len(right_partition[right_partition == 1]) / len(right_partition)) / 2
+            # assume the value less than threshold is positive (1), greater than threshold is negative. (0)
+            positive_negative = (len(left_partition[left_partition == 1]) / len(left_partition)
+                                 + len(right_partition[right_partition == 0]) / len(right_partition)) / 2
+            # make decision here
+            is_positive_negative = positive_negative > negative_positive
+            choose = positive_negative if is_positive_negative else negative_positive
+            if max_exact_classification < choose:
+                max_exact_classification = choose
+                best_threshold = threshold
+        feature[feature < best_threshold] = int(is_positive_negative)
+        feature[feature > best_threshold] = int(not is_positive_negative)
+        return feature
 
     def train(self, X_train, y_train):
         self.num_class = np.unique(y_train)

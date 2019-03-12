@@ -217,7 +217,14 @@ if __name__ == '__main__':
     print("Accuracy:", len(predicts[predicts == y_test])/len(predicts))
 
     dt_sk = DecisionTreeClassifier(max_depth=5)
+    X[X[:, 7] == 'male', 7] = 1
+    X[X[:, 7] == 'female', 7] = 0
+
+    X_test[X_test[:, 7] == 'male', 7] = 1
+    X_test[X_test[:, 7] == 'female', 7] = 0
     dt_sk.fit(X, y)
-    dt_sk.predict(X_test)
+    y_pred = dt_sk.predict(X_test)
+    print("Accuracy of Sk-learn:", len(y_pred[y_pred == y_test]) / len(y_pred))
+
 
 

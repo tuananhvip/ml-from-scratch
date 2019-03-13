@@ -33,16 +33,12 @@ class NodeDT:
 
 class DecisionTree:
     """
-    Algorithms:
-        + Metrics: either entropy/information gain or classification error.
-        - Start from root node. Scan through all features, choose the best feature base on the metric we've just found.
-        ....
-        - At any level, the number of elements in the set reduces corresponding to that chosen feature.
+    Metrics: either entropy/information gain or classification error.
     """
 
     _metrics = {'ce': '_classification_error', 'ig': '_information_gain'}
 
-    def __init__(self, max_depth=5, criterion='ce'):
+    def __init__(self, max_depth=None, criterion='ce'):
         self.max_depth = max_depth
         self.criterion = criterion
         self.num_class = 0
@@ -131,9 +127,9 @@ class DecisionTree:
         Algorithm:
             - Start from the root. Find the best feature that has optimum entropy/information gain or classification error.
             - From that best feature, loop through all categories to build subtree.
-            - If entropy/classification erorr is 0, or reach all features then that node is leaf, stop and move to
-                other subtrees
-        :param root:
+            - If entropy/classification erorr is 0, or reach all features then that node is leaf or reach the max depth,
+                then stop and move to other subtrees
+        :param root: root node at current level
         :return:
         """
         N, D = root.X.shape

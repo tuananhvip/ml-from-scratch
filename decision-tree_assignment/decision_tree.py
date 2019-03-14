@@ -20,6 +20,11 @@ class NodeDT:
         self.used = []
 
     def entropy(self):
+        """
+        Compute entropy at a given node.
+        E(X) = - sum_v(p(X_v) * log_2(p(X_v))) with X_v is a subset of X = (X_1, X_2, ..., X_n)
+        :return: entropy coefficient.
+        """
         n = len(self.y)
         sum_ = 0
         for i in np.unique(self.y):
@@ -38,9 +43,15 @@ class DecisionTree:
 
     _metrics = {'ce': '_classification_error', 'ig': '_information_gain'}
 
-    def __init__(self, max_depth=None, criterion='ce'):
+    def __init__(self, max_depth=None, criterion='ig'):
+        """
+        :param max_depth: define what depth of the tree should be.
+        :param criterion: either 'ce' or 'ig'.
+        """
         self.max_depth = max_depth
         self.criterion = criterion
+        if self.criterion not in self._metrics.keys():
+            self.criterion = 'ig'
         self.num_class = 0
         self.tree = None
         self.thresholds = {}
@@ -50,7 +61,7 @@ class DecisionTree:
 
     def _find_threshold(self, feature, y_train, num_class):
         """
-        The main point is find a good threshold that optimal split label.
+        The main point is find a good threshold that is the optimal split label.
         A good threshold is the threshold that minimize mis-classification error.
 
         The algorithm:
@@ -58,7 +69,7 @@ class DecisionTree:
             - For each available threshold, split feature data to 2 partitions.
             - For each partition, we check and compute mis-classification error for each label.
 
-        :param feature: numerical value feature.
+        :param feature: numerical value of `feature`.
         :param y_train: label.
         :param num_class: number of class
         :return: categorical value of `feature`.
@@ -88,7 +99,9 @@ class DecisionTree:
 
     def _entropy(self, feature, node):
         """
-        E(X) = - sum_v(p(X_v) * log_2(p(X_v))) with X_v is a subset of X = (X_1, X_2, ..., X_n)
+        Compute entropy each partition of specific feature in a given node.
+        :param feature: specific feature in dataset of `node`.
+        :param node: a node we're checking on.
         :return: an entropy scalar that measure the uncertainty of a feature in data.
         """
         entropy = 0
@@ -108,6 +121,12 @@ class DecisionTree:
         return entropy
 
     def _information_gain(self, feature, node):
+        """
+        Compute information gain between a node with that feature.
+        :param feature:
+        :param node:
+        :return: information gain coefficient.
+        """
         return node.entropy() - self._entropy(feature, node)
 
     def _classification_error(self, feature, node):
@@ -127,6 +146,7 @@ class DecisionTree:
         Algorithm:
             - Start from the root. Find the best feature that has optimum entropy/information gain or classification error.
             - From that best feature, loop through all categories to build subtree.
+            ...
             - If entropy/classification erorr is 0, or reach all features then that node is leaf or reach the max depth,
                 then stop and move to other subtrees
         :param root: root node at current level
@@ -182,6 +202,7 @@ class DecisionTree:
         return node.label
 
     def predict(self, X_new):
+        # First convert numerical feature to categorical feature.
         for key, (threshold, is_positive_negative) in self.thresholds.items():
             X_new[key] = int(is_positive_negative) if X_new[key] < threshold else int(not is_positive_negative)
         tree = self.tree

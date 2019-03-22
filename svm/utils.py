@@ -1,6 +1,4 @@
 from scipy import io
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -24,8 +22,14 @@ class Graph:
         plt.scatter(class_2[:, 0], class_2[:, 1], c='b', marker='o')
         plt.show()
 
-    def visualize_boundary(self, W, b):
+    def visualize_boundary_linear(self, W, b):
         W = W.T.reshape((2, ))
         xp = np.linspace(np.min(self.X[:, 0]), np.max(self.X[:, 0]), 100)
         yp = -(W[0] * xp + b)/W[1]
         plt.plot(xp, yp)
+        plt.pause(10)
+
+    def visualize_boundary(self, svm_model):
+        x1_plot = np.linspace(np.min(self.X[:, 0]), np.max(self.X[:, 0]), 100)
+        x2_plot = np.linspace(np.min(self.X[:, 1]), np.max(self.X[:, 1]), 100)
+        X, Y = np.meshgrid(x1_plot, x2_plot)

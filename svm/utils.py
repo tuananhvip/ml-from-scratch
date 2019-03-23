@@ -1,10 +1,14 @@
 from scipy import io
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
+
 
 def load_mat_file(mat_file):
     mat = io.loadmat(mat_file)
     return mat['X'], mat['y']
+
 
 class Graph:
 
@@ -32,4 +36,9 @@ class Graph:
     def visualize_boundary(self, svm_model):
         x1_plot = np.linspace(np.min(self.X[:, 0]), np.max(self.X[:, 0]), 100)
         x2_plot = np.linspace(np.min(self.X[:, 1]), np.max(self.X[:, 1]), 100)
-        X, Y = np.meshgrid(x1_plot, x2_plot)
+        X1, X2 = np.meshgrid(x1_plot, x2_plot)
+        vals = np.zeros(X1.shape)
+        for i in range(0, X1.shape[1]):
+            this_X = [X1[:, i], X2[:, i]]
+            vals[:, i] = svm_model.predict(this_X)
+        print(vals)

@@ -28,5 +28,7 @@ def rbf_kernel():
     rbf_svm.fit(X, y)
     plot.visualize_boundary(rbf_svm)
 
+    rbf_svm.predict()
+
 
 rbf_kernel()

@@ -1,4 +1,4 @@
-from utils import load_mat_file, Graph
+from utils import load_mat_file, Graph, load_vocabulary, process_email, email_feature
 from sklearn.svm import SVC
 
 
@@ -26,7 +26,32 @@ def rbf_kernel():
     rbf_svm = SVC(C=C, kernel='rbf')
 
     rbf_svm.fit(X, y)
-    plot.visualize_boundary(rbf_svm)
 
 
-rbf_kernel()
+def spam_classification():
+    vocabs = load_vocabulary('vocab.txt')
+    X, y = load_mat_file('spamTrain.mat')
+    y = y.reshape((-1, ))
+    C = 0.1
+    svm = SVC(C=C, kernel='linear')
+    svm.fit(X, y)
+
+    pred_train = svm.predict(X)
+    print("Training accuracy:", len(pred_train[pred_train == y])/len(pred_train))
+
+    X_test, y_test = load_mat_file('spamTest.mat')
+    y_test = y_test.reshape((-1, ))
+
+    pred_test = svm.predict(X_test)
+    print("Testing accuracy:", len(pred_test[pred_test == y_test]) / len(pred_test))
+
+    # Try with emailSample1.txt
+    with open('emailSample1.txt') as f:
+        sample_1 = f.read()
+    word_indices = process_email(sample_1, vocabs)
+    x = email_feature(word_indices, vocabs)
+    x = x.reshape((-1, 1)).T
+    is_spam = svm.predict(x)
+    print("Spam" if is_spam[0] == 1 else "No spam")
+
+spam_classification()

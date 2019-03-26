@@ -27,6 +27,8 @@ def rbf_kernel():
 
     rbf_svm.fit(X, y)
 
+    rbf_svm.predict()
+
 
 def spam_classification():
     vocabs = load_vocabulary('vocab.txt')

@@ -1,3 +1,6 @@
+"""
+Author: Giang Tran.
+"""
 from cvxopt import matrix, solvers
 import numpy as np
 import os

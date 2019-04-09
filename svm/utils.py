@@ -1,7 +1,10 @@
 from scipy import io
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
 import numpy as np
 import re
 from nltk.stem import PorterStemmer
@@ -14,7 +17,7 @@ def load_mat_file(mat_file):
     return mat['X'], mat['y']
 
 
-class Graph:
+class Plotter:
 
     def __init__(self, X, y, interactive='off'):
         if interactive == 'on':

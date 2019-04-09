@@ -1,59 +1,144 @@
-from utils import load_mat_file, Graph, load_vocabulary, process_email, email_feature
-from sklearn.svm import SVC
+from cvxopt import matrix, solvers
+import numpy as np
+import os
 
+class SVM:
 
-def linear_kernel():
-    X, y = load_mat_file('ex6data1.mat')
-    plot = Graph(X, y, 'on')
-    plot.plot_data()
+    def __init__(self, C=1.0, kernel='linear', debug=False, is_saved=False):
+        self.C = C
+        self.kernel = kernel
+        self.debug = debug
+        self.is_saved = is_saved
 
-    C = 1.0
-    linear_svm = SVC(C=C, kernel='linear')
+    def _lagrange_duality(self, X_train, y_train, V):
+        """
+        note: maximize f(x) <==> minimize -f(x)
 
-    linear_svm.fit(X, y)
+        ==> Using cvxopt.qp
 
-    W = linear_svm.coef_
-    b = linear_svm.intercept_
-    plot.visualize_boundary_linear(W, b)
+        minimize: f(x) = (1/2)*x'*P*x + q'*x
+        s.t: G*x <= h
+             A*x = b
 
+        P = V.T * V
+        q = (-1).T
 
-def rbf_kernel():
-    X, y = load_mat_file('ex6data2.mat')
-    plot = Graph(X, y, 'on')
-    plot.plot_data()
+        G = [[-1, 0, 0, ..., 0],
+             [0, -1, 0, ..., 0],
+             [0, 0, -1, ..., 0],
+             ....              ,
+             [0, 0, 0, ..., -1],
+             --------------
+             [1, 0, 0, ..., 0],
+             [0, 1, 0, ..., 0],
+             [0, 0, 1, ..., 0],
+             ....             ,
+             [0, 0, 0, ..., 1]]
 
-    C = 1.0
-    rbf_svm = SVC(C=C, kernel='rbf')
+            => G.shape = (2*N, 2*N)
 
-    rbf_svm.fit(X, y)
+        h = [[0, 0, 0, ..., 0].T, [C, C, C, ..., C].T]
 
-    rbf_svm.predict()
+            => h.shape = (2*N, 1)
 
+        A = y
 
-def spam_classification():
-    vocabs = load_vocabulary('vocab.txt')
-    X, y = load_mat_file('spamTrain.mat')
-    y = y.reshape((-1, ))
-    C = 0.1
-    svm = SVC(C=C, kernel='linear')
-    svm.fit(X, y)
+        b = np.zeros(N)
 
-    pred_train = svm.predict(X)
-    print("Training accuracy:", len(pred_train[pred_train == y])/len(pred_train))
+        """
+        N, D = X_train.shape
 
-    X_test, y_test = load_mat_file('spamTest.mat')
-    y_test = y_test.reshape((-1, ))
+        P = matrix(V.dot(V.T))  # shape = (N, N)
 
-    pred_test = svm.predict(X_test)
-    print("Testing accuracy:", len(pred_test[pred_test == y_test]) / len(pred_test))
+        q = matrix(-np.ones((N, 1)))
 
-    # Try with emailSample1.txt
-    with open('emailSample1.txt') as f:
-        sample_1 = f.read()
-    word_indices = process_email(sample_1, vocabs)
-    x = email_feature(word_indices, vocabs)
-    x = x.reshape((-1, 1)).T
-    is_spam = svm.predict(x)
-    print("Spam" if is_spam[0] == 1 else "No spam")
+        G = matrix(np.concatenate((-np.eye(N), np.eye(N)), axis=0))  # shape = (2N, N)
+        h = matrix(np.array([0] * N + [self.C] * N).reshape(-1, 1))  # shape = (2N, 1)
 
-spam_classification()
+        A = matrix(y_train.T)
+        b = matrix(np.zeros((1, 1)))
+
+        solvers.options['show_progress'] = False
+        sol = solvers.qp(P, q, G, h, A, b)
+
+        lambda_ = np.array(sol['x'])
+
+        return lambda_
+
+    def _coef(self, X, y, V, lambda_):
+        epsilon = 1e-6
+        S = np.where(lambda_ > epsilon)[0]
+        V_S = V[S, :]
+        X_S = X[S, :]
+        y_S = y[S, :]
+        lambda_S = lambda_[S]
+        w = V_S.T.dot(lambda_S)
+        b = np.mean(y_S - X_S.dot(w))
+        return w, b
+
+    def _train(self, X_train, y_train):
+        """
+        Solve SVM by using Lagrange duality
+
+        V = [x_1*y_1, x_2*y_2, ..., x_n*y_n]
+
+        g(z) = -1/2*z'*V'*V*z + 1'*z
+
+        z = argmax_z g(z) <==> argmin_z -g(z)
+
+        z = argmin_z (1/2)*z'*V'*V*z - 1'*z
+        s.t: -z <= 0
+              z <= C
+              y'*z = 0
+
+        After get z, find w, b.
+        ----------------------------------------
+        """
+        V = X_train * y_train  # shape = (N, D)
+        lambda_ = self._lagrange_duality(X_train, y_train, V)
+        self.w, self.b = self._coef(X_train, y_train, V, lambda_)
+
+    def train(self, X_train, y_train):
+        assert len(np.unique(y_train)) == 2, "This SVM assumes only work for binary classification."
+        assert type(X_train) is np.ndarray and type(y_train) is np.ndarray, "Expect numpy array but got %s" % (type(X_train))
+        try:
+            self.w, self.b = self._load()
+        except FileNotFoundError:
+            self._train(X_train, y_train)
+        if self.is_saved:
+            self._save()
+        if self.debug:
+            self._check_with_sklearn(X_train, y_train)
+
+    def _save(self):
+        if "model" not in os.listdir():
+            os.mkdir("model")
+        if "weights" not in os.listdir("model"):
+            np.save("model/weights", {'weights': self.w, 'bias': self.b})
+
+    def _load(self):
+        data = np.load("model/weights.npy").item()
+        return data['weights'], data['bias']
+
+    def _check_with_sklearn(self, X, y):
+        print("-"*50)
+        print("------------ Training phrase --------------")
+        print("My SVM weights:", self.w)
+        print("My SVM bias:", self.b)
+
+        from sklearn.svm import SVC
+        self.sk_svm = SVC(C=self.C, kernel='linear')
+        self.sk_svm.fit(X, y)
+
+        W = self.sk_svm.coef_
+        b = self.sk_svm.intercept_
+        print("Sk-learn SVM weights:", W)
+        print("Sk-learn SVM bias:", b)
+        print("-"*50)
+
+    def predict(self, X_test):
+        assert type(X_test) is np.ndarray, "Expect numpy array but got %s" % (type(X_test))
+        pred = X_test.dot(self.w) + self.b
+        pred[pred >= 0] = 1
+        pred[pred < 0] = -1
+        return pred

@@ -12,8 +12,9 @@ class SVM:
         self.kernel = kernel
         self.debug = debug
         self.is_saved = is_saved
+        self.w, self.b = None, None
 
-    def _lagrange_duality(self, X_train, y_train, V):
+    def _solve_lagrange_dual_function(self, X_train, y_train, V):
         """
         note: maximize f(x) <==> minimize -f(x)
 
@@ -68,7 +69,16 @@ class SVM:
 
         return lambda_
 
-    def _coef(self, X, y, V, lambda_):
+    def _solve_svm(self, X, y, V, lambda_):
+        """
+        V: X * y
+        lambda_: sparse vector we found from solving lagrange dual function above.
+        --------------------------------------------------------------------------------------------------------
+        Let S = {n: lambda_n != 0 (lambda_n > epsilon)} and N_S is the number elements in the set S.
+
+        w = sum(lambda_S * V_S)
+        b = (1/N_S)*sum(y_S - X_S.dot(w))
+        """
         epsilon = 1e-6
         S = np.where(lambda_ > epsilon)[0]
         V_S = V[S, :]
@@ -98,8 +108,8 @@ class SVM:
         ----------------------------------------
         """
         V = X_train * y_train  # shape = (N, D)
-        lambda_ = self._lagrange_duality(X_train, y_train, V)
-        self.w, self.b = self._coef(X_train, y_train, V, lambda_)
+        lambda_ = self._solve_lagrange_dual_function(X_train, y_train, V)
+        return self._solve_svm(X_train, y_train, V, lambda_)
 
     def train(self, X_train, y_train):
         assert len(np.unique(y_train)) == 2, "This SVM assumes only work for binary classification."
@@ -107,9 +117,9 @@ class SVM:
         try:
             self.w, self.b = self._load()
         except FileNotFoundError:
-            self._train(X_train, y_train)
-        if self.is_saved:
-            self._save()
+            self.w, self.b = self._train(X_train, y_train)
+            if self.is_saved:
+                self._save()
         if self.debug:
             self._check_with_sklearn(X_train, y_train)
 
@@ -130,11 +140,10 @@ class SVM:
         print("My SVM bias:", self.b)
 
         from sklearn.svm import SVC
-        self.sk_svm = SVC(C=self.C, kernel='linear')
-        self.sk_svm.fit(X, y)
-
-        W = self.sk_svm.coef_
-        b = self.sk_svm.intercept_
+        sk_svm = SVC(C=self.C, kernel=self.kernel)
+        sk_svm.fit(X, y)
+        W = sk_svm.coef_
+        b = sk_svm.intercept_
         print("Sk-learn SVM weights:", W)
         print("Sk-learn SVM bias:", b)
         print("-"*50)

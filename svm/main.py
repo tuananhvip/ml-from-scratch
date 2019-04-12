@@ -3,14 +3,18 @@ from sklearn.svm import SVC
 from svm import SVM
 import numpy as np
 
+
 def linear_kernel():
     X, y = load_mat_file('ex6data1.mat')
+    y = y.reshape((-1, 1))
+    y = y.astype(np.double)
+    y[y == 0] = -1
     plot = Plotter(X, y, 'on')
     plot.plot_data()
 
     C = 1e5
 
-    svm = SVM(C=C, kernel='linear')
+    svm = SVM(C=C, kernel='linear', debug=True, is_saved=False)
     svm.train(X, y)
 
     W = svm.w
@@ -38,7 +42,7 @@ def spam_classification():
     y = y.astype(np.double)
     y[y == 0] = -1
     C = 0.1
-    svm = SVM(C=C, kernel='linear', is_saved=True)
+    svm = SVM(C=C, kernel='linear', debug=True, is_saved=False)
     svm.train(X, y)
 
     pred_train = svm.predict(X)
@@ -61,4 +65,5 @@ def spam_classification():
     is_spam = svm.predict(x)
     print("Spam" if is_spam[0] == 1 else "No spam")
 
+linear_kernel()
 spam_classification()

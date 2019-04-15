@@ -27,7 +27,7 @@ class Plotter:
 
     def plot_data(self):
         y = self.y.reshape((-1, ))
-        class_1 = self.X[y == 0]
+        class_1 = self.X[y == -1]
         class_2 = self.X[y == 1]
         plt.scatter(class_1[:, 0], class_1[:, 1], c='r', marker='+')
         plt.scatter(class_2[:, 0], class_2[:, 1], c='b', marker='o')
@@ -45,10 +45,13 @@ class Plotter:
         x2_plot = np.linspace(np.min(self.X[:, 1]), np.max(self.X[:, 1]), 100)
         X1, X2 = np.meshgrid(x1_plot, x2_plot)
         vals = np.zeros(X1.shape)
-        for i in range(0, X1.shape[1]):
-            this_X = [X1[:, i], X2[:, i]]
+        for i in range(X1.shape[1]):
+            this_X = np.array([X1[:, i], X2[:, i]]).T
             vals[:, i] = svm_model.predict(this_X)
-        print(vals)
+            print(vals[:, i])
+        plt.contour(X1, X2, vals)
+        plt.show()
+        plt.pause(10)
 
 
 def load_vocabulary(file_name):

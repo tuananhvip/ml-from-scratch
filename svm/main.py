@@ -16,23 +16,28 @@ def linear_kernel():
 
     svm = SVM(C=C, kernel='linear', debug=True, is_saved=False)
     svm.train(X, y)
-
-    W = svm.w
-    b = svm.b
-    plot.visualize_boundary_linear(W, b)
+    #
+    # W = svm.w
+    # b = svm.b
+    # plot.visualize_boundary_linear(W, b)
 
 
 def rbf_kernel():
     X, y = load_mat_file('ex6data2.mat')
+
+    y = y.reshape((-1, 1))
+    y = y.astype(np.double)
+    y[y == 0] = -1
+
     plot = Plotter(X, y, 'on')
     plot.plot_data()
 
     C = 1.0
-    rbf_svm = SVC(C=C, kernel='rbf')
 
-    rbf_svm.fit(X, y)
+    svm = SVC(C=C, kernel='rbf')
+    svm.fit(X, y)
 
-    rbf_svm.predict()
+    plot.visualize_boundary(svm)
 
 
 def spam_classification():
@@ -65,5 +70,6 @@ def spam_classification():
     is_spam = svm.predict(x)
     print("Spam" if is_spam[0] == 1 else "No spam")
 
-linear_kernel()
-spam_classification()
+# linear_kernel()
+# spam_classification()
+rbf_kernel()

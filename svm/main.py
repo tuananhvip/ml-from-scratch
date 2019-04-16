@@ -32,10 +32,13 @@ def rbf_kernel():
     plot = Plotter(X, y, 'on')
     plot.plot_data()
 
-    C = 1.0
+    C = 1e5
 
-    svm = SVC(C=C, kernel='rbf')
+    svm = SVC(C=C, kernel='rbf', gamma='auto')
     svm.fit(X, y)
+    pred = svm.predict(X).T.reshape((-1,))
+    y = y.reshape((-1,))
+    print("Accuracy:", len(y[pred == y]) / len(y))
 
     plot.visualize_boundary(svm)
 

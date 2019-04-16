@@ -48,10 +48,9 @@ class Plotter:
         for i in range(X1.shape[1]):
             this_X = np.array([X1[:, i], X2[:, i]]).T
             vals[:, i] = svm_model.predict(this_X)
-            print(vals[:, i])
-        plt.contour(X1, X2, vals)
+        plt.contour(X1, X2, vals, [0])
         plt.show()
-        plt.pause(10)
+        plt.pause(20)
 
 
 def load_vocabulary(file_name):

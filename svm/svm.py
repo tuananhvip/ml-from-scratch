@@ -35,11 +35,14 @@ class SVM:
 
     def _gaussian_kernel(self, x, z):
         """
-        k(x, z) = exp(-gamma*(norm_2(x-z)**2))
+        k(x, z) = exp(-gamma*(norm_2(x, z)**2))
         """
         return np.exp(-self.gamma*(cdist(x, z)**2))
 
     def _sigmoid_kernel(self, x, z):
+        """
+        k(x, z) = tanh(gamma*np.dot(x, z) + r)
+        """
         def tanh(s):
             return (np.exp(s)-np.exp(-s))/(np.exp(s)+np.exp(-s))
         return tanh(self.gamma*np.dot(x, z.T) + self.r)
@@ -136,12 +139,15 @@ class SVM:
         """
         if self.gamma == 'auto':
             self.gamma = 1/X_train.shape[1]
+        # elif self.gamma == 'scale':
+        #     self.gamma = (1/X_train.shape[1])*np.var(X_train, axis=0)
         lambda_ = self._solve_lagrange_dual_function(X_train, y_train)
         return self._solve_svm(X_train, y_train, lambda_)
 
     def train(self, X_train, y_train):
         assert len(np.unique(y_train)) == 2, "This SVM assumes only work for binary classification."
-        assert type(X_train) is np.ndarray and type(y_train) is np.ndarray, "Expect numpy array but got %s" % (type(X_train))
+        assert type(X_train) is np.ndarray and type(y_train) is np.ndarray, \
+            "Expect numpy array but got %s" % (type(X_train) if type(X_train) is not np.ndarray else type(y_train))
         self.support_vectors, self.dual_coef, self.X_M, self.y_M = self._train(X_train, y_train)
         if self.debug:
             self._check_with_sklearn(X_train, y_train)
@@ -166,7 +172,7 @@ class SVM:
 
     def predict(self, X_test):
         """
-        w = sum_S(dual_coef * kernel(support_vector, X_test))
+        w = np.dot(dual_coef, kernel(support_vector, X_test))
         b = (1/N_M)*sum_M(y_M - sum_S(dual_coef * kernel(support_vector, X_M)))
         """
         pred = self.decision(X_test)

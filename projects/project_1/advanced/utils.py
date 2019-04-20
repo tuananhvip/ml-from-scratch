@@ -2,10 +2,11 @@ import os
 import requests
 import gzip
 import shutil
-
+import numpy as np
+import matplotlib.pyplot as plt
 
 def load_dataset_mnist():
-    print("------- Downloading MNIST dataset --------")
+    print("-------> Downloading MNIST dataset")
     download_files = ["http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz",
                       "http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz",
                       "http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz",
@@ -28,4 +29,10 @@ def load_dataset_mnist():
                 shutil.copyfileobj(f_in, f_out)
         os.system("rm -rf " + file_name)
 
-    print("------- Finish ---------")
+    print("-------> Finish")
+
+def plot_image(image):
+    image = np.array(image)
+    image = image.reshape((28, 28))
+    plt.imshow(image)
+    plt.show()

@@ -1,4 +1,7 @@
 import tensorflow as tf
+from utils import load_dataset_mnist
+from mnist import MNIST
+from sklearn.preprocessing import StandardScaler
 tf.enable_eager_execution()
 
 
@@ -22,15 +25,23 @@ class Lenet:
             self.optimizer.apply_gradients(zip(grads, self.model.trainable_variables))
 
     def conv_layers(self):
-        self.model.add(tf.keras.layers.Conv2D(filters=6, kernel_size=(5, 5)))
+        self.model.add(tf.keras.layers.Conv2D(filters=6, kernel_size=(5, 5), activation='tanh'))
         self.model.add(tf.keras.layers.AveragePooling2D(pool_size=(2, 2), strides=2))
-        self.model.add(tf.keras.layers.Conv2D(filters=16, kernel_size=(5, 5)))
+        self.model.add(tf.keras.layers.Conv2D(filters=16, kernel_size=(5, 5), activation='tanh'))
         self.model.add(tf.keras.layers.AveragePooling2D(pool_size=(2, 2), strides=2))
 
     def fc_layers(self):
-        self.model.add(tf.keras.layers.Dense(units=120, activation=tf.keras.activations.tanh))
-        self.model.add(tf.keras.layers.Dense(units=84))
+        self.model.add(tf.keras.layers.Dense(units=120, activation='tanh'))
+        self.model.add(tf.keras.layers.Dense(units=84, activation='tanh'))
+        self.model.add(tf.keras.layers.Dense(units=10, activation='softmax'))
 
 
-tf.keras.optimizers.SGD
-tf.keras.losses.categorical_crossentropy
+if __name__ == '__main__':
+    load_dataset_mnist()
+
+    mndata = MNIST('data_mnist')
+
+    images, labels = mndata.load_training()
+
+    lenet = Lenet(100, 64, tf.keras.optimizers.SGD, tf.keras.losses.categorical_crossentropy)
+    lenet.train()

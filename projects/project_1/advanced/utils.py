@@ -3,7 +3,13 @@ import requests
 import gzip
 import shutil
 import numpy as np
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+
 
 def load_dataset_mnist():
     print("-------> Downloading MNIST dataset")

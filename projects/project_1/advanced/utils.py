@@ -10,6 +10,8 @@ except ImportError:
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
 
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
 
 def load_dataset_mnist():
     print("-------> Downloading MNIST dataset")
@@ -37,8 +39,27 @@ def load_dataset_mnist():
 
     print("-------> Finish")
 
+
 def plot_image(image):
     image = np.array(image)
     image = image.reshape((28, 28))
     plt.imshow(image)
     plt.show()
+
+
+def one_hot_encoding(y):
+    one_hot = OneHotEncoder()
+    y = np.array(y)
+    y = y.reshape((-1, 1))
+    return one_hot.fit_transform(y).toarray()
+
+
+def preprocess_data(X, y, nn=False):
+    scaler = StandardScaler()
+    scaler.fit(X)
+    X = scaler.transform(X)
+    if nn:
+        X = X.reshape((-1, 28, 28, 1))
+
+    y = one_hot_encoding(y)
+    return X, y

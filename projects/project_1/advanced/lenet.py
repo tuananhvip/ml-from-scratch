@@ -1,5 +1,5 @@
 import tensorflow as tf
-from utils import load_dataset_mnist
+from utils import load_dataset_mnist, preprocess_data
 from mnist import MNIST
 from sklearn.preprocessing import StandardScaler
 from numpy import array
@@ -60,17 +60,7 @@ class Lenet:
         return tf.argmax(predictions, axis=1).numpy()
 
 
-def preprocess_data(X, y):
-    scaler = StandardScaler()
-    scaler.fit(X)
-    X = scaler.transform(X)
-    X = X.reshape((-1, 28, 28, 1))
-
-    y = array(y)
-    return X, y
-
-
-if __name__ == '__main__':
+def mnist_classification():
     training_phase = "saved_model" not in os.listdir()
     load_dataset_mnist()
     mndata = MNIST('data_mnist')
@@ -79,15 +69,19 @@ if __name__ == '__main__':
 
     if training_phase:
         images, labels = mndata.load_training()
-        images, labels = preprocess_data(images, labels)
+        images, labels = preprocess_data(images, labels, True)
         lenet.train(images, labels)
     else:
         images_test, labels_test = mndata.load_testing()
-        images_test, labels_test = preprocess_data(images_test, labels_test)
+        images_test, labels_test = preprocess_data(images_test, labels_test, True)
 
         pred = lenet.predict(images_test)
-        print("Accuracy:", len(labels_test[pred == labels_test])/len(labels_test))  # 98%
+        print("Accuracy:", len(labels_test[pred == labels_test]) / len(labels_test))  # 98%
 
         from sklearn.metrics.classification import confusion_matrix
         print("Confusion matrix: ")
         print(confusion_matrix(labels_test, pred))
+
+
+if __name__ == '__main__':
+    mnist_classification()

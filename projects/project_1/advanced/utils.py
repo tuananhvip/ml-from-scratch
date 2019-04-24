@@ -49,17 +49,18 @@ def plot_image(image):
 
 def one_hot_encoding(y):
     one_hot = OneHotEncoder()
-    y = np.array(y)
     y = y.reshape((-1, 1))
     return one_hot.fit_transform(y).toarray()
 
 
-def preprocess_data(X, y, nn=False):
+def preprocess_data(X, y, nn=False, test=False):
     scaler = StandardScaler()
     scaler.fit(X)
     X = scaler.transform(X)
+    y = np.array(y)
+
     if nn:
         X = X.reshape((-1, 28, 28, 1))
-
-    y = one_hot_encoding(y)
+    if not test:
+        y = one_hot_encoding(y)
     return X, y

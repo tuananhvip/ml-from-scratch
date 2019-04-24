@@ -95,7 +95,7 @@ class SoftmaxRegression:
                 self.gradient_descent(grad)
                 it += self.batch_size
                 num_batches += 1
-            print(batch_loss / num_batches)
+            print("Loss at epoch %s %.2f" % (e + 1 , batch_loss / num_batches))
 
     def train(self, X_train, y_train):
         assert X_train.shape[0] == y_train.shape[0], "X and y must have the same data points."
@@ -119,9 +119,12 @@ if __name__ == '__main__':
     softmax.train(images, labels)
 
     images_test, labels_test = mndata.load_testing()
-    images_test, _ = preprocess_data(images_test, labels_test)
+    images_test, labels_test = preprocess_data(images_test, labels_test, test=True)
 
     pred = softmax.predict(images_test)
 
     print("Accuracy:", len(pred[labels_test == pred]) / len(pred))
+    from sklearn.metrics.classification import confusion_matrix
 
+    print("Confusion matrix: ")
+    print(confusion_matrix(labels_test, pred))

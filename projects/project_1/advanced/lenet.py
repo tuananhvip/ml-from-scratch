@@ -1,8 +1,6 @@
 import tensorflow as tf
 from utils import load_dataset_mnist, preprocess_data
 from mnist import MNIST
-from sklearn.preprocessing import StandardScaler
-from numpy import array
 import os
 tf.enable_eager_execution()
 
@@ -73,7 +71,7 @@ def mnist_classification():
         lenet.train(images, labels)
     else:
         images_test, labels_test = mndata.load_testing()
-        images_test, labels_test = preprocess_data(images_test, labels_test, True)
+        images_test, _ = preprocess_data(images_test, labels_test, True)
 
         pred = lenet.predict(images_test)
         print("Accuracy:", len(labels_test[pred == labels_test]) / len(labels_test))  # 98%

@@ -35,6 +35,7 @@ class Lenet:
 
             if (e + 1) % 5 == 0:
                 self.model.save_weights("./saved_model/lenet")
+
         if "importable_model" not in os.listdir():
             tf.contrib.saved_model.save_keras_model(self.model, "importable_model/")
 

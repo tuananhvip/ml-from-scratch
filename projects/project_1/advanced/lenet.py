@@ -34,9 +34,7 @@ class Lenet:
             print(batch_loss / num_batches)
 
             if (e + 1) % 5 == 0:
-                self.model.save_weights("./saved_model/lenet")
-        if "importable_model" not in os.listdir():
-            tf.contrib.saved_model.save_keras_model(self.model, "importable_model/")
+                self.model.save_weights("./saved_model/lenet_model/lenet")
 
     def conv_layers(self):
         self.model.add(tf.keras.layers.Conv2D(input_shape=(28, 28, 1), filters=6, kernel_size=(5, 5), activation='tanh', padding='same')) # (n, 24, 24, 6)
@@ -50,10 +48,14 @@ class Lenet:
         self.model.add(tf.keras.layers.Dense(units=84, activation='tanh'))
         self.model.add(tf.keras.layers.Dense(units=10, activation='softmax'))
 
+    def load_model(self):
+        self.model.load_weights("./saved_model/lenet_model/lenet")
+        print("----> LOADED WEIGHTS")
+
     def predict(self, X_test):
         X_test = tf.cast(X_test, tf.float32)
-        self.model.load_weights("./saved_model/lenet")
         predictions = self.model(inputs=X_test)
+        print(predictions[:10])
         return tf.argmax(predictions, axis=1).numpy()
 
 
@@ -71,7 +73,8 @@ def mnist_classification():
     else:
         images_test, labels_test = mndata.load_testing()
         images_test, labels_test = preprocess_data(images_test, labels_test, True, True)
-
+        lenet.load_model()
+        print(labels_test[:10])
         pred = lenet.predict(images_test)
         print("Accuracy:", len(labels_test[pred == labels_test]) / len(labels_test))  # 98%
 

@@ -4,7 +4,8 @@ Author: Giang Tran.
 
 import numpy as np
 import pandas as pd
-from scipy.linalg import norm
+from scipy.spatial.distance import cdist
+from scipy.stats import itemfreq
 from sklearn.neighbors import KNeighborsClassifier
 
 
@@ -42,7 +43,7 @@ class KNN:
         :param X_new:
         :return: ndarray manhattan distance of X_new versus all other points X.
         """
-        return np.sum(np.abs(self.X - X_new), axis=1)
+        return cdist(X_new, self.X, 'cityblock')
 
     def _l2_distance(self, X_new):
         """
@@ -50,7 +51,7 @@ class KNN:
         :param X_new:
         :return: ndarray euclidean distance of X_new versus all other points X.
         """
-        return np.sqrt(np.sum((self.X - X_new)**2, axis=1))
+        return cdist(X_new, self.X, 'euclidean')
 
     def _cosine_similarity(self, X_new):
         """
@@ -58,7 +59,7 @@ class KNN:
         :param X_new:
         :return: ndarray cosine similarity of X_new versus all other points X.
         """
-        return np.dot(self.X, X_new.T) / (norm(self.X, 2, axis=1) * norm(X_new, 2))
+        return cdist(X_new, self.X, 'cosine')
 
     def predict(self, X_new):
         assert type(X_new) is np.ndarray, "Use numpy array instead."
@@ -67,18 +68,14 @@ class KNN:
             self.metric = 'euclidean'
         func = getattr(self, self._metrics[self.metric])
         dist = func(X_new)
-        dist = np.argsort(dist)
-
-        k_nearest = dist[:self.K]
-
+        dist = np.argsort(dist, axis=1)
+        k_nearest = dist[:, :self.K]
         labels = self.y[k_nearest]
-        max_, choose = 0, 0
-        for c in self.classes:
-            num = len(labels[labels == c])
-            if num > max_:
-                max_ = num
-                choose = c
-        return choose
+        res = []
+        for label in labels:
+            label, count = np.unique(label, return_counts=True)
+            res.append(label[np.argmax(count)])
+        return np.array(res)
 
 
 def experiment(X, y, X_test, y_test):
@@ -89,12 +86,7 @@ def experiment(X, y, X_test, y_test):
         for k in ks:
             knn = KNN(k, X, y, metric=metric)
 
-            y_pred = []
-            for i in range(X_test.shape[0]):
-                pred = knn.predict(X_test[i].reshape((1, 2)))
-                y_pred.append(pred)
-
-            y_pred = np.asarray(y_pred)
+            y_pred = knn.predict(X_test)
 
             print("KNN with K = %d and metric = %s | Accuracy: %f" % (k, metric, len(y_test[y_pred == y_test]) / len(y_test)))
         print("-"*50)
@@ -121,18 +113,13 @@ def main():
         experiment(X, y, X_test, y_test)
         return
 
-    k = 1
+    k = 3
 
     knn = KNN(k, X, y, metric='manhattan')
 
-    y_pred = []
-    for i in range(X_test.shape[0]):
-        pred = knn.predict(X_test[i].reshape((1, 2)))
-        y_pred.append(pred)
+    pred = knn.predict(X_test)
 
-    y_pred = np.asarray(y_pred)
-
-    print("My KNN accuracy:", len(y_test[y_pred == y_test]) / len(y_test))
+    print("My KNN accuracy:", len(y_test[pred == y_test]) / len(y_test))
 
     # Check with Sk learn KNN.
     sk_knn = KNeighborsClassifier(n_neighbors=k, metric='manhattan')

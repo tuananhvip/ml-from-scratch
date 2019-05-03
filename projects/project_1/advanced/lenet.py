@@ -69,7 +69,7 @@ def mnist_classification():
     load_dataset_mnist()
     mndata = MNIST('data_mnist')
 
-    lenet = Lenet(20, 64, tf.train.AdamOptimizer(learning_rate=0.001), tf.losses.softmax_cross_entropy)
+    lenet = Lenet(20, 64, tf.keras.optimizers.Adam(), tf.keras.losses.categorical_crossentropy)
 
     if training_phase:
         images, labels = mndata.load_training()

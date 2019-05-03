@@ -2,6 +2,7 @@ import tensorflow as tf
 from utils import load_dataset_mnist, preprocess_data
 from mnist import MNIST
 import os
+from sklearn.model_selection import train_test_split
 tf.enable_eager_execution()
 
 
@@ -17,8 +18,9 @@ class Lenet:
         self.fc_layers()
 
     def train(self, X_train, y_train):
-        X_train = tf.cast(X_train, tf.float32)
         for e in range(self.epoch):
+            X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.1)
+            X_train = tf.cast(X_train, tf.float32)
             batch_loss = 0
             num_batches = 0
             it = 0
@@ -31,7 +33,10 @@ class Lenet:
                     batch_loss += loss_value
                 it += self.batch_size
                 num_batches += 1
-            print(batch_loss / num_batches)
+            print("Train loss at epoch %s: %f " % (e, batch_loss / num_batches))
+            logits_val = self.model(inputs=X_val)
+            loss_val = self.loss_function(y_val, logits_val)
+            print("Validation loss at epoch %s: %f" % (e, loss_val))
 
             if (e + 1) % 5 == 0:
                 self.model.save_weights("./saved_model/lenet_model/lenet")

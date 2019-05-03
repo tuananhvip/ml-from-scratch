@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
-
+import matplotlib.pyplot as plt
 
 class RidgeRegression:
 
@@ -9,32 +9,43 @@ class RidgeRegression:
         self.lambda_ = lambda_
         self.alpha = alpha
         self.debug = debug
+        if debug:
+            plt.ion()
 
     def _hypothesis(self, X, theta):
-        assert X.shape[1] == theta.shape[0], "Incorrect shape."
-        return np.dot(X, theta)
+        return np.dot(X, theta) + self.bias
 
     def _loss(self, X, y):
         m = y.shape[0]
         return np.linalg.norm(self._hypothesis(X, self.theta) - y, 2) ** 2 / (2*m) + \
-               self.lambda_*np.linalg.norm(self.theta, 2) ** 2 / 2
+               self.lambda_*np.linalg.norm(self.theta, 2) ** 2 / (2*m)
 
     def _gradient(self, X, y):
         m = X.shape[0]
-        return 1 / m * np.dot(X.T, self._hypothesis(X, self.theta) - y) + (self.lambda_*self.theta)
+        return 1/m * np.dot(X.T, self._hypothesis(X, self.theta) - y) + (self.lambda_/m*self.theta)
 
     def _gradient_bias(self, X, y):
         m = X.shape[0]
-        ones = np.ones((m, 1)).T
-        return 1 / m * np.dot(ones, self._hypothesis(X, self.theta) - y)
+        ones = np.ones((m, 1))
+        return 1 / m * np.dot(ones.T, self._hypothesis(ones, self.bias) - y)
 
     def _gradient_descent(self, X, y):
+        train_loss = []
+        val_loss = []
         for e in range(self.epochs):
-            self.theta = self.theta - self.alpha * self._gradient(X, y)
-            self.bias = self.bias - self.alpha * self._gradient_bias(X, y)
+            X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+            self.theta = self.theta - self.alpha * self._gradient(X_train, y_train)
             if self.debug:
-                print("Loss at iterations %d: %f " % (e + 1, self._loss(X, y)))
-            if abs(np.mean(self._gradient(X, y))) < 1e-3:
+                print("Train loss at iterations %d: %f " % (e + 1, self._loss(X_train, y_train)))
+                print("Val loss at iterations %d: %f " % (e + 1, self._loss(X_val, y_val)))
+                train_loss.append(self._loss(X_train, y_train))
+                val_loss.append(self._loss(X_val, y_val))
+                plt1, = plt.plot(train_loss, color='b', label='Train loss')
+                plt2, = plt.plot(val_loss, color='r', label='Validation loss')
+                plt.legend(handles=[plt1, plt2])
+                plt.show()
+                plt.pause(0.5)
+            if abs(np.mean(self._gradient(X_train, y_train))) < 1e-3:
                 break
 
     def _train(self, X_train, y_train):
@@ -42,16 +53,17 @@ class RidgeRegression:
 
     def train(self, X_train, y_train):
         self.theta = np.random.normal(size=(X_train.shape[1], 1))
-        self.bias = np.random.normal()
+        self.bias = np.mean(y_train)
         self._train(X_train, y_train)
 
     def predict(self, X_test):
         assert X_test.shape[1] == self.theta.shape[0], "Incorrect shape."
         return self._hypothesis(X_test, self.theta)
 
-    def score(self, pred, y_test):
-        assert pred.shape == y_test.shape, "Prediction and Label must be the same shape."
-        return abs(np.mean(pred - y_test))
+    def r2_score(self, pred, y_test):
+        total_sum_squares = np.sum((y_test - np.mean(y_test))**2)
+        residual_sum_squares = np.sum((y_test - pred)**2)
+        return 1 - residual_sum_squares/total_sum_squares
 
     def ridge_sklearn(self, X_train, y_train):
         from sklearn.linear_model.ridge import Ridge
@@ -61,6 +73,7 @@ class RidgeRegression:
 
         print(ridge.coef_)
         print(ridge.intercept_)
+
 
 def standardize_regression(X, y):
     x_mean = np.mean(X, axis=0)
@@ -72,25 +85,46 @@ def standardize_regression(X, y):
 
 def main():
     X = np.loadtxt('prostate.data.txt', skiprows=1)
+    columns = ['lcavol', 'lweight',	'age', 'lbph', 'svi', 'lcp', 'gleason', 'pgg45']
     y = X[:, -1]
     X = X[:, :-1]
-    X, y = standardize_regression(X, y)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
+    X_train, y_train = standardize_regression(X_train, y_train)
     y_train = y_train.reshape((-1, 1))
+    experiment = True
 
     alpha = 0.01
     epochs = 500
-    lammbda_ = 0
-    ridge = RidgeRegression(alpha, epochs, lammbda_, False)
-    ridge.train(X_train, y_train)
-    print(ridge.theta.T)
-    print(ridge.bias)
-    pred = ridge.predict(X_test)
-    y_test = y_test.reshape((-1, 1))
-    print("Test score: %f" % ridge.score(pred, y_test))
-
-    ridge.ridge_sklearn(X_train, y_train)
+    if experiment:
+        plt.ion()
+        from sklearn.linear_model.ridge import Ridge
+        lambda_ = np.arange(1, 10000, 50)
+        coefs = []
+        for l in lambda_:
+            ridge = RidgeRegression(alpha, epochs, l, False)
+            ridge.train(X_train, y_train)
+            coefs.append(ridge.theta.T)
+            # ridge = Ridge(l)
+            # ridge.fit(X_train, y_train)
+            # coefs.append(ridge.coef_)
+        coefs = np.array(coefs).T
+        for ind, c in enumerate(coefs):
+            c = c.reshape((-1,))
+            plt.plot(c, label=columns[ind])
+        plt.xlabel('lambda (regularization)')
+        plt.ylabel('theta (coefficient)')
+        plt.legend()
+        plt.show()
+        plt.pause(10)
+    else:
+        lambda_ = 1
+        ridge = RidgeRegression(alpha, epochs, lambda_, True)
+        ridge.train(X_train, y_train)
+        X_test, y_test = standardize_regression(X_test, y_test)
+        pred = ridge.predict(X_test)
+        y_test = y_test.reshape((-1, 1))
+        if ridge.debug:
+            print("Test score: %f" % ridge.r2_score(pred, y_test))
 
 
 if __name__ == '__main__':

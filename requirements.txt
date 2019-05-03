@@ -8,3 +8,4 @@ requests
 cvxopt
 pandas
 scipy
+opencv-python

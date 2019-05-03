@@ -3,6 +3,7 @@ import numpy as np
 from lenet import Lenet
 import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
 
 drawing = False # true if mouse is pressed
 ix, iy = -1, -1

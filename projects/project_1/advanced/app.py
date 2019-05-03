@@ -3,6 +3,7 @@ import numpy as np
 from lenet import Lenet
 import tensorflow as tf
 from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
 
 drawing = False # true if mouse is pressed
 ix, iy = -1, -1
@@ -10,6 +11,8 @@ ix, iy = -1, -1
 def transform_img(image):
     resized = tf.image.resize_images(image, (28, 28), tf.image.ResizeMethod.AREA)
     resized = resized.numpy().reshape((28, 28))
+    plt.imshow(resized, cmap='gray')
+    plt.show()
     scaler = StandardScaler()
     scaler.fit(resized)
     resized = scaler.transform(resized)
@@ -38,9 +41,6 @@ def draw_circle(event, x, y, _, __):
         print(img_)
         pred = lenet.predict(img_)
         print(pred)
-
-def f():
-    pass
 
 img = np.zeros((512, 512, 1), np.uint8)
 cv2.namedWindow('Digit Recognition')

@@ -33,18 +33,20 @@ def draw_circle(event, x, y, _, __):
     elif event == cv2.EVENT_MOUSEMOVE:
         if drawing:
             end_point = (x, y)
-            cv2.line(img, start_point, end_point, 255, 15)
+            cv2.line(img, start_point, end_point, 255, 20)
             start_point = end_point
 
     elif event == cv2.EVENT_LBUTTONUP:
         drawing = False
-        img_ = transform_img(img, True)
+        img_ = transform_img(img, False)
         pred = lenet.predict(img_)
         print(pred)
+        cv2.putText(img, "Predict:" + str(pred[0]), (10, 380), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
 
 img = np.zeros((400, 400, 1), np.uint8)
 cv2.namedWindow('Digit Recognition')
 cv2.setMouseCallback('Digit Recognition', draw_circle)
+cv2.putText(img, "Predict:", (10, 380), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
 
 while(1):
     cv2.imshow('Digit Recognition',img)
@@ -53,5 +55,6 @@ while(1):
         break
     elif k == ord('m'):
         img = np.zeros((400, 400, 1), np.uint8)
+        cv2.putText(img, "Predict:", (10, 380), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), lineType=cv2.LINE_AA)
 
 cv2.destroyAllWindows()

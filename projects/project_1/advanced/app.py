@@ -2,11 +2,11 @@ import cv2
 import numpy as np
 from lenet import Lenet
 import tensorflow as tf
-from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 
 drawing = False # true if mouse is pressed
-ix, iy = -1, -1
+start_point = None
+end_point = None
 
 def transform_img(image, is_plotted=False):
     resized = tf.image.resize_images(image, (28, 28), tf.image.ResizeMethod.AREA)
@@ -15,9 +15,7 @@ def transform_img(image, is_plotted=False):
         import matplotlib.pyplot as plt
         plt.imshow(resized, cmap='gray')
         plt.show()
-    scaler = StandardScaler()
-    scaler.fit(resized)
-    resized = scaler.transform(resized)
+    resized = resized / 255
     resized = resized.reshape((1, 28, 28, 1))
     return resized
 
@@ -26,25 +24,25 @@ lenet.load_model()
 
 # mouse callback function
 def draw_circle(event, x, y, _, __):
-    global ix, iy, drawing
+    global start_point, end_point, drawing
 
     if event == cv2.EVENT_LBUTTONDOWN:
         drawing = True
-        ix,iy = x,y
+        start_point = (x,y)
 
     elif event == cv2.EVENT_MOUSEMOVE:
-        if drawing is True:
-            cv2.circle(img, (x, y), 5, 255, -1)
+        if drawing:
+            end_point = (x, y)
+            cv2.line(img, start_point, end_point, 255, 15)
+            start_point = end_point
 
     elif event == cv2.EVENT_LBUTTONUP:
         drawing = False
-        cv2.circle(img, (x, y), 5, 255, -1)
         img_ = transform_img(img, True)
-        print(img_)
         pred = lenet.predict(img_)
         print(pred)
 
-img = np.zeros((512, 512, 1), np.uint8)
+img = np.zeros((400, 400, 1), np.uint8)
 cv2.namedWindow('Digit Recognition')
 cv2.setMouseCallback('Digit Recognition', draw_circle)
 
@@ -54,6 +52,6 @@ while(1):
     if k == 27:
         break
     elif k == ord('m'):
-        img = np.zeros((512, 512, 1), np.uint8)
+        img = np.zeros((400, 400, 1), np.uint8)
 
 cv2.destroyAllWindows()

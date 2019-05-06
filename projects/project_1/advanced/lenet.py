@@ -17,10 +17,11 @@ class Lenet:
         self.conv_layers()
         self.fc_layers()
 
-    def train(self, X_train, y_train):
+    def train(self, X, y):
         for e in range(self.epoch):
-            X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.1)
+            X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
             X_train = tf.cast(X_train, tf.float32)
+            X_val = tf.cast(X_val, tf.float32)
             batch_loss = 0
             num_batches = 0
             it = 0
@@ -60,7 +61,6 @@ class Lenet:
     def predict(self, X_test):
         X_test = tf.cast(X_test, tf.float32)
         predictions = self.model(inputs=X_test)
-        print(predictions[:10])
         return tf.argmax(predictions, axis=1).numpy()
 
 
@@ -69,7 +69,7 @@ def mnist_classification():
     load_dataset_mnist()
     mndata = MNIST('data_mnist')
 
-    lenet = Lenet(20, 64, tf.keras.optimizers.Adam(), tf.keras.losses.categorical_crossentropy)
+    lenet = Lenet(20, 64, tf.train.AdamOptimizer(), tf.losses.softmax_cross_entropy)
 
     if training_phase:
         images, labels = mndata.load_training()
@@ -79,7 +79,6 @@ def mnist_classification():
         images_test, labels_test = mndata.load_testing()
         images_test, labels_test = preprocess_data(images_test, labels_test, True, True)
         lenet.load_model()
-        print(labels_test[:10])
         pred = lenet.predict(images_test)
         print("Accuracy:", len(labels_test[pred == labels_test]) / len(labels_test))  # 98%
 

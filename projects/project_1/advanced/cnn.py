@@ -1,5 +1,7 @@
 import tensorflow as tf
 import numpy as np
+from sklearn.model_selection import train_test_split
+import os
 tf.enable_eager_execution()
 
 
@@ -11,11 +13,10 @@ class CNN:
         self.batch_size = batch_size
         self.optimizer = optimizer
         self.loss_function = loss_function
+        self.hidden_layers()
 
-    def hidden_layers(self, X_train, y_train):
-        num_classes = len(np.unique(y_train))
-
-        self.model.add(tf.keras.layers.Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=X_train.shape[1:]))
+    def hidden_layers(self):
+        self.model.add(tf.keras.layers.Conv2D(32, (3, 3), padding='same', activation='relu', input_shape=(32, 32, 3)))
         self.model.add(tf.keras.layers.BatchNormalization())
         self.model.add(tf.keras.layers.Conv2D(32, (3, 3), padding='same', activation='relu'))
         self.model.add(tf.keras.layers.BatchNormalization())
@@ -37,7 +38,8 @@ class CNN:
         self.model.add(tf.keras.layers.Dropout(0.4))
 
         self.model.add(tf.keras.layers.Flatten())
-        self.model.add(tf.keras.layers.Dense(num_classes, activation='softmax'))
+        self.model.add(tf.keras.layers.Dense(10, activation='softmax'))
+        self.model.summary()
 
     def data_augmentation(self, X_train):
         self.datagen = tf.keras.preprocessing.image.ImageDataGenerator(rotation_range=90,
@@ -46,36 +48,50 @@ class CNN:
                                                                   horizontal_flip=True)
         self.datagen.fit(X_train)
 
-    def _train(self, X_train, y_train):
-        test_x = X_train[0].reshape((1, 32, 32, 3))
-        abc = []
-        for e in range(self.epochs):
-            batches = 0
-            for x_batch, y_batch in self.datagen.flow(test_x, y_train[0], batch_size=1):
-                batches += 1
-                abc.append(x_batch)
-                # if batches >= test_x.shape[0] / self.batch_size:
-                #     break
+    def _train(self, X, y):
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+        X_train = tf.cast(X, tf.float32)
+        X_val = tf.cast(X_val, tf.float32)
+        y_train = tf.one_hot(y, 10)
+        y_val = tf.one_hot(y_val, 10)
+        self.model.compile(optimizer=self.optimizer, loss=self.loss_function, metrics=['accuracy'])
+        self.model.fit_generator(self.datagen.flow(X_train, y_train, batch_size=self.batch_size),
+                            steps_per_epoch=X_train.shape[0] / self.batch_size, epochs=self.epochs,
+                            verbose=1, validation_data=(X_val, y_val))
+        model_json = self.model.to_json()
+        with open('model.json', 'w') as json_file:
+            json_file.write(model_json)
+        self.model.save_weights('model.h5')
+
+    def load_model(self):
+        self.model.load_weights("./saved_model/cifar/cnn")
+        print("----> LOADED WEIGHTS")
 
     def train(self, X_train, y_train):
-        self.hidden_layers(X_train, y_train)
         self.data_augmentation(X_train)
         self._train(X_train, y_train)
-        # self.model.fit_generator(self.datagen.flow(X_train, y_train, batch_size=self.batch_size),
-        #                          steps_per_epoch=X_train.shape[0]/self.batch_size,
-        #                          epochs=self.epochs)
+
+    def predict(self, X_test):
+        predictions = self.model(inputs=X_test)
+        return tf.argmax(predictions, axis=1).numpy()
+
 
 def main():
+    training_phase = None
     learning_rate = 0.01
-    epochs = 1
+    epochs = 125
     batch_size = 32
-    optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
+    optimizer = tf.keras.optimizers.RMSprop(lr=learning_rate, decay=1e-6)
     loss_function = tf.keras.losses.categorical_crossentropy
-
     cnn = CNN(epochs, batch_size, optimizer, loss_function)
 
     (X_train, y_train), (X_test, y_test) = tf.keras.datasets.cifar10.load_data()
+    X_train = X_train / 255
+    X_test = X_test / 255
     cnn.train(X_train, y_train)
+
+    from keras.preprocessing.sequence import TimeseriesGenerator
+
 
 if __name__ == '__main__':
     main()

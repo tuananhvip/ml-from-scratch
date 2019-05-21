@@ -89,8 +89,8 @@ def experiment(X, y, X_test, y_test):
             y_pred = knn.predict(X_test)
 
             print("KNN with K = %d and metric = %s | Accuracy: %f" % (k, metric, len(y_test[y_pred == y_test]) / len(y_test)))
-        print("-"*50)
 
+        print("-"*50)
 
 def main():
     df = pd.read_csv("./data/train.csv")

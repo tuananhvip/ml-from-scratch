@@ -104,9 +104,6 @@ def main():
             ridge = RidgeRegression(alpha, epochs, l, False)
             ridge.train(X_train, y_train)
             coefs.append(ridge.theta.T)
-            # ridge = Ridge(l)
-            # ridge.fit(X_train, y_train)
-            # coefs.append(ridge.coef_)
         coefs = np.array(coefs).T
         for ind, c in enumerate(coefs):
             c = c.reshape((-1,))

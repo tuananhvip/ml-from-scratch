@@ -27,25 +27,54 @@ class HiddenLayer:
         self.W = None
  
     def _sigmoid(self, z):
+        """
+        Sigmoid activation function.
+            g(z) = 1 / (1 + e^-z)
+        """
         return 1/(1+np.exp(-z))
 
     def _tanh(self, z):
+        """
+        Tanh activation function.
+            g(z) = tanh(z)
+        """
         return np.tanh(z)
 
     def _relu(self, z):
+        """
+        Relu activation function.
+            g(z) = max(0, z)
+        """
         return z*(z > 0)
 
     def _softmax(self, z):
+        """
+        Softmax activation function. Use at the output layer.
+            g(z) = e^z / sum(e^z)
+        """
         z_prime = z - np.max(z, axis=1, keepdims=True)
         return np.exp(z_prime) / np.sum(np.exp(z_prime), axis=1, keepdims=True)
 
     def _sigmoid_grad(self, z):
+        """
+        Sigmoid derivative.
+            g'(z) = g(z)(1-g(z))
+        """
         return z*(1-z)
 
     def _tanh_grad(self, z):
+        """
+        Tanh derivative.
+            g'(z) = 1 - g^2(z).
+        """
         return 1 - z**2
 
     def _relu_grad(self, z):
+        """
+        Relu derivative.
+            g'(z) = 0 if g(z) <= 0
+            g'(z) = 1 if g(z) > 0
+        """
         return 1*(z > 0)
 
     def forward(self, inputs):
@@ -189,6 +218,14 @@ class NeuralNetwork:
         _ = self.layers[i-1].backward(dZ, dA_prev, X, True)
 
     def train(self, train_X, train_Y):
+        """
+        Training function.
+
+        Parameters
+        ----------
+        train_X: training dataset X.
+        train_Y: one-hot encoding label.
+        """
         for e in range(self.epochs):
             Y_hat = self._forward(train_X)
             self._backward(train_Y, Y_hat, train_X)
@@ -196,6 +233,9 @@ class NeuralNetwork:
             print("Loss epoch %d: %.2f" % (e+1, loss))
 
     def predict(self, test_X):
+        """
+        Predict function.
+        """
         y_hat = self._forward(test_X)
         return np.argmax(y_hat, axis=1)
 

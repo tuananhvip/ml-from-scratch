@@ -8,7 +8,8 @@ import numpy as np
 
 class HiddenLayer:
 
-    def __init__(self, num_neurons, activation, alpha):
+    def __init__(self, num_neurons, activation, alpha, keep_prob=1,
+                 use_batch_norm=False):
         """
         Abstract class represents for all hidden layers in class neural network.
 
@@ -18,11 +19,16 @@ class HiddenLayer:
         activation: available activation functions. Must be in [sigmoid, tanh,
             relu, softmax]. Softmax activation must be at the last layer.
         alpha: hyperparameter learning rate for gradient descent.
+        keep_prob: probability to keep neurons in network, use for dropout technique.
+        use_batch_norm: whether use batch normalization. If true, the NN
+            provides 2 new parameters gamma and beta.
         """
         assert activation in ["sigmoid", "tanh", "relu", "softmax"], "Unknown activation."
         self.num_neurons = num_neurons
         self.activation = activation
         self.alpha = alpha
+        self.keep_prob = keep_prob
+        self.use_batch_norm = use_batch_norm
         self.output = None
         self.W = None
  
@@ -77,6 +83,20 @@ class HiddenLayer:
         """
         return 1*(z > 0)
 
+    def _dropout(self, A):
+        np.random.uniform(0, self.keep_prob, A.shape)
+        pass
+
+    def _batch_norm(self, Z):
+        if not self.use_batch_norm:
+            return Z
+        self.gamma = np.random.normal(size=(1, num_neurons))
+        self.beta = np.random.normal(size=(1, num_neurons))
+        mu = np.mean(Z, axis=0, keepdims=True)
+        sigma = np.std(Z, axis=0, keepdims=True)
+        Z = (Z - mu)/np.sqrt(sigma)
+        return self.gamma*Z + self.beta
+
     def forward(self, inputs):
         """
         Layer forward level. LINEAR -> ACTIVATION. 
@@ -98,10 +118,11 @@ class HiddenLayer:
             self.W = np.random.normal(0, scale,
                                      (inputs.shape[1], self.num_neurons))
         Z = inputs.dot(self.W)
+        Z = self._batch_norm(Z)
         self.A = getattr(self, "_" + self.activation)(Z)
         return self.A
 
-    def backward(self, dZ, dA_prev, X, input_layer=False):
+    def backward(self, dZ, dA_prev, prev_layer, input_layer=False):
         """
         Layer backward level. Compute gradient respect to W and update it.
         Also compute gradient respect to X for computing gradient of previous
@@ -119,12 +140,14 @@ class HiddenLayer:
         -------
         dA_prev: gradient of J respect to X at the current layer.
         """
-        grad = X.T.dot(dZ)
+        grad = prev_layer.A.T.dot(dZ)
         if input_layer:
             dA_prev = None
         else:
             dA_prev = dZ.dot(self.W.T)
         self.W = self.W - self.alpha*grad
+        dZ = dA_prev * getattr(self.layers[i-1], "_" + self.layers[i-1].activation +
+                                "_grad")(self.layers[i-1].A)
         return dA_prev
 
 class NeuralNetwork:
@@ -212,9 +235,7 @@ class NeuralNetwork:
         dZ = (Y_hat - Y)/m # shape = (N, C)
         dA_prev = None
         for i in range(len(self.layers)-1, 0, -1):
-            dA_prev = self.layers[i].backward(dZ, dA_prev, self.layers[i-1].A)
-            dZ = dA_prev * getattr(self.layers[i-1], "_" + self.layers[i-1].activation +
-                                  "_grad")(self.layers[i-1].A)
+            dA_prev = self.layers[i].backward(dZ, dA_prev, self.layers[i-1])
         _ = self.layers[i-1].backward(dZ, dA_prev, X, True)
 
     def train(self, train_X, train_Y):

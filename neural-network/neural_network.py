@@ -87,15 +87,16 @@ class HiddenLayer:
         np.random.uniform(0, self.keep_prob, A.shape)
         pass
 
-    def _batch_norm(self, Z):
+    def _batch_norm_forward(self, Z):
         if not self.use_batch_norm:
             return Z
-        self.gamma = np.random.normal(size=(1, num_neurons))
-        self.beta = np.random.normal(size=(1, num_neurons))
-        mu = np.mean(Z, axis=0, keepdims=True)
-        sigma = np.std(Z, axis=0, keepdims=True)
-        Z = (Z - mu)/np.sqrt(sigma)
-        return self.gamma*Z + self.beta
+        if not hasattr(self, "gamma") and not hasattr(self, "beta"):
+            self.gamma = np.ones((1, self.num_neurons))
+            self.beta = np.zeros((1, self.num_neurons))
+        self.mu = np.mean(Z, axis=0, keepdims=True)
+        self.sigma = np.std(Z, axis=0, keepdims=True)
+        self.Znorm = (Z - self.mu)/np.sqrt(self.sigma)
+        return self.gamma*self.Znorm + self.beta
 
     def forward(self, inputs):
         """
@@ -117,12 +118,27 @@ class HiddenLayer:
                      np.sqrt(1/inputs.shape[1]))
             self.W = np.random.normal(0, scale,
                                      (inputs.shape[1], self.num_neurons))
-        Z = inputs.dot(self.W)
-        Z = self._batch_norm(Z)
-        self.A = getattr(self, "_" + self.activation)(Z)
+        self.Z = inputs.dot(self.W)
+        Ztrans = self._batch_norm_forward(self.Z)
+        self.A = getattr(self, "_" + self.activation)(Ztrans)
         return self.A
 
-    def backward(self, dZ, dA_prev, prev_layer, input_layer=False):
+    def _batch_norm_backward(self, dZ):
+        if not self.use_batch_norm:
+            return dZ
+        m = self.Z.shape[0]
+        dZnorm = dZ * self.gamma
+        self.gamma = np.sum(dZ * self.Znorm, axis=0, keepdims=True)
+        self.beta = np.sum(dZ, axis=0, keepdims=True)
+        dSigma = np.sum(dZnorm * (-((self.Z - self.mu)*self.sigma**(-3/2))/2),
+                       axis=0, keepdims=True)
+        dMu = np.sum(dZnorm*(-1/np.sqrt(self.sigma)), axis=0, keepdims=True) +\
+                dSigma*((-2/m)*np.sum(self.Z - self.mu, axis=0, keepdims=True))
+        dZ = dZnorm*(1/np.sqrt(self.sigma)) + dMu/m +\
+                dSigma*((2/m)*np.sum(self.Z - self.mu, axis=0, keepdims=True))
+        return dZ
+
+    def backward(self, dZ, dA_prev, prev_layer):
         """
         Layer backward level. Compute gradient respect to W and update it.
         Also compute gradient respect to X for computing gradient of previous
@@ -132,27 +148,32 @@ class HiddenLayer:
         ----------
         dZ: gradient of J respect to Z at the current layer.
         dA_prev: gradient of J respect to X at the after layer.
-            None if at the first layer.
-        X: inputs.
-        input_layer: whether at input layer or not.
+            None if at the first layer as the backward pass.
+        prev_layer: previous layer as the backward pass.
 
         Returns
         -------
         dA_prev: gradient of J respect to X at the current layer.
         """
+        if type(prev_layer) is np.ndarray:
+            grad = prev_layer.T.dot(dZ)
+            self.W = self.W - self.alpha*grad
+            return None
+        dZ = self._batch_norm_backward(dZ)
         grad = prev_layer.A.T.dot(dZ)
-        if input_layer:
-            dA_prev = None
-        else:
-            dA_prev = dZ.dot(self.W.T)
-        self.W = self.W - self.alpha*grad
-        dZ = dA_prev * getattr(self.layers[i-1], "_" + self.layers[i-1].activation +
-                                "_grad")(self.layers[i-1].A)
-        return dA_prev
+        dA_prev = dZ.dot(self.W.T)
+        self.W = self._gradient_descent(self.W, grad)
+        dZ = dA_prev * getattr(prev_layer, "_" + prev_layer.activation +
+                                "_grad")(prev_layer.A)
+        return dZ, dA_prev
+
+    def _gradient_descent(self, param, grad):
+        return param - self.alpha * grad
 
 class NeuralNetwork:
 
-    def __init__(self, epochs, batch_size, learning_rate, nn_structure):
+    def __init__(self, epochs, batch_size, learning_rate, nn_structure,
+                 batch_norm):
         """
         Deep neural network architecture.
 
@@ -162,11 +183,13 @@ class NeuralNetwork:
         batch_size: (integer) number of batch size.
         nn_structure: A list of 2-element tuple (num_neuron, activation)
                  represents neural network architecture.
+        batch_norm: use batch normalization in neural network.
         """
         self.epochs = epochs
         self.batch_size = batch_size
         self.nn_structure = nn_structure
         self.learning_rate = learning_rate
+        self.batch_norm = batch_norm
         self.layers = self._structure()
 
     def _structure(self):
@@ -177,7 +200,8 @@ class NeuralNetwork:
         for struct in self.nn_structure:
             num_neurons = struct[0]
             activation = struct[1]
-            layer = HiddenLayer(num_neurons, activation, learning_rate)
+            layer = HiddenLayer(num_neurons, activation, learning_rate,
+                                1.0, self.batch_norm)
             layers.append(layer)
         return layers
 
@@ -235,8 +259,8 @@ class NeuralNetwork:
         dZ = (Y_hat - Y)/m # shape = (N, C)
         dA_prev = None
         for i in range(len(self.layers)-1, 0, -1):
-            dA_prev = self.layers[i].backward(dZ, dA_prev, self.layers[i-1])
-        _ = self.layers[i-1].backward(dZ, dA_prev, X, True)
+            dZ, dA_prev = self.layers[i].backward(dZ, dA_prev, self.layers[i-1])
+        _ = self.layers[i-1].backward(dZ, dA_prev, X)
 
     def train(self, train_X, train_Y):
         """
@@ -251,7 +275,7 @@ class NeuralNetwork:
             Y_hat = self._forward(train_X)
             self._backward(train_Y, Y_hat, train_X)
             loss = self._loss(train_Y, Y_hat)
-            print("Loss epoch %d: %.2f" % (e+1, loss))
+            print("Loss epoch %d: %f" % (e+1, loss))
 
     def predict(self, test_X):
         """
@@ -273,9 +297,9 @@ if __name__ == '__main__':
         epochs = 20
         batch_size = 64
         learning_rate = 0.1
-        archs = [(100, "relu"), (125, "relu"), (50, "relu"), (labels.shape[1],
+        archs = [(100, "sigmoid"), (125, "sigmoid"), (50, "sigmoid"), (labels.shape[1],
                                                              "softmax")]
-        nn = NeuralNetwork(epochs, batch_size, learning_rate, archs)
+        nn = NeuralNetwork(epochs, batch_size, learning_rate, archs, True)
         nn.train(images, labels)
     else:
         images_test, labels_test = mndata.load_testing()

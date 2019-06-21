@@ -286,10 +286,10 @@ class NeuralNetwork:
 
 if __name__ == '__main__':
     from utils import load_dataset_mnist, preprocess_data
-    from mnist import MNIST
+    from mnist_lib import MNIST
 
-    # load_dataset_mnist()
-    mndata = MNIST('../data_mnist')
+    load_dataset_mnist()
+    mndata = MNIST('data_mnist')
     training_phase = True
     if training_phase:
         images, labels = mndata.load_training()
@@ -299,7 +299,7 @@ if __name__ == '__main__':
         learning_rate = 0.1
         archs = [(100, "sigmoid"), (125, "sigmoid"), (50, "sigmoid"), (labels.shape[1],
                                                              "softmax")]
-        nn = NeuralNetwork(epochs, batch_size, learning_rate, archs, True)
+        nn = NeuralNetwork(epochs, batch_size, learning_rate, archs, False)
         nn.train(images, labels)
     else:
         images_test, labels_test = mndata.load_testing()

@@ -83,8 +83,26 @@ class CNN(NeuralNetwork):
         output = input_X
         return output
 
-    def _backward(self):
-        pass
+    def _backward(self, Y, Y_hat, X):
+        """
+        CNN backward propagation.
+
+        Parameters
+        ----------
+        Y: one-hot encoding label.
+            shape = (m, C).
+        Y_hat: output values of forward propagation NN.
+            shape = (m, C).
+        X: training dataset.
+            shape = (m, iW, iH, iC).
+        """
+        dA_prev = self._backward_last(Y, Y_hat)
+        for i in range(len(self.layers)-3, 0, -1):
+            if isinstance(self.layers[i], ActivationLayer):
+                dA_prev = self.layers[i].backward(dA_prev)
+                continue
+            dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1], self.optimizer)
+        _ = self.layers[i-1].backward(dA_prev, X, self.optimizer)
 
     def train(self, train_X, train_Y):
         Y_hat = self._forward(train_X)

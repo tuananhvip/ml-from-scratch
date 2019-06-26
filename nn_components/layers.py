@@ -56,13 +56,12 @@ class FCLayer(Layer):
 
         Parameters
         ----------
-        dA_prev: gradient of J respect to X at the after layer.
-            None if at the first layer as the backward pass.
-        prev_layer: previous layer as the backward pass.
+        dA_prev: gradient of J respect to A[l+1] of the previous layer according the backward direction.
+        prev_layer: previous layer according the forward direction.
         optimizer: (object) optimizer uses to optimize the loss function.
         Returns
         -------
-        dA_prev: gradient of J respect to X at the current layer.
+        dA_prev: gradient of J respect to A[l] at the current layer.
         """
         if type(prev_layer) is np.ndarray:
             grad = prev_layer.T.dot(dA_prev)
@@ -102,13 +101,14 @@ class ConvLayer(Layer):
 
     def _conv_op(self, slice_a, slice_b):
         """
-        Convolutional operation between 2 slices.
+        Convolutional operation of 2 slices.
         """
         return np.sum(slice_a*slice_b)
 
     def forward(self, X):
         """
-        Forward propagation of conv layer. 
+        Forward propagation of conv layer.
+
         If padding is 'SAME', we must solve this equation to find appropriate number p:
             oW = (iW - fW + 2p)/s + 1
             oH = (iH - fH + 2p)/s + 1
@@ -135,15 +135,33 @@ class ConvLayer(Layer):
             X = np.pad(X, ((0, 0), (p, p), (p, p), (0, 0)), 'constant')
             m, iW, iH, iC = X.shape
 
-        self.conv_out = np.zeros(shape=(m, oW, oH, self.filters))
+        self.output = np.zeros(shape=(m, oW, oH, self.filters))
         for f in range(self.filters):
             for w in range(oW):
                 for h in range(oH):
-                    self.conv_out[:, w, h, f] = self._conv_op(X[:, w:w+fW, h:h+fH, :], self.W[:, :, :, f])
-        return self.conv_out
+                    w_step = w*self.stride
+                    h_step = h*self.stride
+                    self.output[:, w, h, f] = self._conv_op(X[:, w_step:w_step+fW, h_step:h_step+fH, :], 
+                                                            self.W[:, :, :, f])
+        return self.output
 
-    def backward(self):
-        pass
+    def backward(self, dA_prev, prev_layer, optimizer):
+        """
+        Backward propagation of the conv layer.
+        """
+        m, oW, oH, num_filts = self.output.shape
+        fW, fH, fC, _ = self.W.shape
+        dW = np.zeros(shape=(fW, fH, fC, num_filts))
+        dA_temp = np.zeros(shape=prev_layer.output.shape)
+        for f in range(num_filts):
+            for w in range(oW):
+                for h in range(oH):
+                    w_step = w*self.stride
+                    h_step = h*self.stride
+                    dW[:, :, :, f] += prev_layer.output[:, w_step:w_step+fW, h_step:h_step+fH, :] * dA_prev[:, w, h, f]
+                    dA_temp[:, w_step:w_step+fW, h_step:h_step+fH, :] += self.W[:, :, :, f] * dA_prev[:, w, h, f]
+        self.update_params(dW, optimizer)
+        return dA_temp
 
     def update_params(self, grad, optimizer):
         updated_grad = optimizer.minimize(grad)
@@ -162,13 +180,29 @@ class PoolingLayer(Layer):
         stride: strides of the filter.
         mode: either average pooling or max pooling.
         """
+        assert len(filter_size) == 2, "Pooling filter size must be a 2-elements tuple (width, height)."
+        assert mode in ["max", "avg"], "Mode of pooling is either max pooling or average pooling."
         self.filter_size = filter_size
         self.stride = stride
+        self.mode = mode
 
     def _pool_op(self, slice_a):
-        return np.max(slice_a, axis=(1, 2))
+        """
+        Pooling operation, either max pooling or average pooling.
+
+        Parameters
+        ----------
+        slice_a: a slice to compute pooling.
+        """
+        if self.mode == "max":
+            return np.max(slice_a, axis=(1, 2))
+        else:
+            return np.average(slice_a, axis=(1, 2))
 
     def forward(self, X):
+        """
+        Pooling layer forward propagation. 
+        """
         m, iW, iH, iC = X.shape
         fW, fH = self.filter_size
         oW = int((iW - fW)/self.stride) + 1
@@ -180,6 +214,24 @@ class PoolingLayer(Layer):
                 h_step = h*self.stride
                 self.output[:, w, h, :] = self._pool_op(X[:, w_step:w_step+fW, h_step:h_step+fH, :])
         return self.output
+
+    def _create_mask(self, prev_layer):
+        m, iW, iH, iC = prev_layer.output.shape
+        m, oW, oH, oC = self.output.shape
+        fW, fH = self.filter_size
+        mask = np.zeros(shape=(m, iW, iH, iC))
+        for w in range(oW):
+            for h in range(oH):
+                w_step = w*self.stride
+                h_step = h*self.stride
+                mask[:, w_step:w_step+fW, h_step:h_step+fH, :] = 1*(prev_layer.output[:, w_step:w_step+fW, h_step:h_step+fH, :]                                                         == self.output[:, w, h, :])
+        return mask
+
+    def backward(self, dA_prev, prev_layer):
+        """
+        Pooling layer backward propagation.
+        """
+        mask = self._create_mask(prev_layer)
 
 class FlattenLayer(Layer):
 

@@ -9,6 +9,7 @@ from neural_network.neural_network import NeuralNetwork
 from nn_components.layers import ConvLayer, ActivationLayer, PoolingLayer, FlattenLayer, FCLayer
 from optimizations_algorithms.optimizers import SGD, SGDMomentum, RMSProp, Adam
 
+
 class CNN(NeuralNetwork):
     def __init__(self, epochs, batch_size, optimizer, cnn_structure):
         """
@@ -32,34 +33,92 @@ class CNN(NeuralNetwork):
         """
         layers = []
         for struct in cnn_structure:
-            filter_size = struct["filter_size"]
-            filters = struct["filters"]
-            padding = struct["padding"]
-            stride = struct["stride"]
-            conv_layer = ConvLayer(filter_size, filters, padding, stride)
-            layers.append(conv_layer)
-            if "activation" in struct:
-                activation = struct["activation"]
-                act_layer = ActivationLayer(activation=activation)
-                layers.append(act_layer)
+            if type(struct) is str and struct == "flatten":
+                flatten_layer = FlattenLayer()
+                layers.append(flatten_layer)
+                continue
+            if struct["type"] == "conv":
+                filter_size = struct["filter_size"]
+                filters = struct["filters"]
+                padding = struct["padding"]
+                stride = struct["stride"]
+                conv_layer = ConvLayer(filter_size, filters, padding, stride)
+                layers.append(conv_layer)
+                if "activation" in struct:
+                    activation = struct["activation"]
+                    act_layer = ActivationLayer(activation=activation)
+                    layers.append(act_layer)
+            elif struct["type"] == "pool":
+                filter_size = struct["filter_size"]
+                stride = struct["stride"]
+                mode = struct["mode"]
+                pool_layer = PoolingLayer(filter_size=filter_size, stride=stride, mode=mode)
+                layers.append(pool_layer)
+            else:
+                num_neurons = struct["num_neurons"]
+                weight_init = struct["weight_init"]
+                fc_layer = FCLayer(num_neurons=num_neurons, weight_init=weight_init)
+                layers.append(fc_layer)
+                if "activation" in struct:
+                    activation = struct["activation"]
+                    act_layer = ActivationLayer(activation)
+                    layers.append(act_layer)
         return layers
 
     def _forward(self, train_X):
-        pass
+        """
+        Forward propagation all layers in convolutional neural network.
+
+        Parameters
+        ----------
+        train_X: input training image X. shape = (m, iW, iH, iC)
+
+        Returns
+        -------
+        Output value of the last layer. 
+        """
+        input_X = train_X
+        for layer in self.layers:
+            input_X = layer.forward(input_X)
+        output = input_X
+        return output
 
     def _backward(self):
         pass
 
-    def train(self):
-        pass
+    def train(self, train_X, train_Y):
+        Y_hat = self._forward(train_X)
+        print(self._loss(train_Y, Y_hat))
 
     def predict(self):
         pass
 
 
 def main():
-    lenet_arch = [{"filter_size": (5,5), "filters": 6, "padding": "SAME", "stride": 1, "activation": "sigmoid"},
-                  {"filter_size": (5,5), "filters": 6, "padding": "SAME", "stride": 1, "activation": "sigmoid"}]
+    from libs.utils import load_dataset_mnist, preprocess_data
+    from libs.mnist_lib import MNIST
+
+    load_dataset_mnist("../libs")
+    mndata = MNIST('../libs/data_mnist')
+    lenet_arch = [{"type": "conv", "filter_size": (5, 5), "filters": 6, "padding": "SAME", "stride": 1, "activation": "relu"},
+                {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
+                {"type": "conv", "filter_size": (5, 5), "filters": 16, "padding": "SAME", "stride": 1, "activation": "relu"},
+                {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
+                "flatten",
+                {"type": "fc", "num_neurons": 120, "weight_init": "std", "activation": "tanh"},
+                {"type": "fc", "num_neurons": 84, "weight_init": "std", "activation": "tanh"},
+                {"type": "fc", "num_neurons": 10, "weight_init": "std", "activation": "softmax"}
+                ]
+    epochs = 20
+    batch_size = 64
+    learning_rate = 0.1
+    sgd = SGD(learning_rate)
+    cnn = CNN(epochs=20, batch_size=32, optimizer=sgd, cnn_structure=lenet_arch)
+    training_phase = True
+    if training_phase:
+        images, labels = mndata.load_training()
+        images, labels = preprocess_data(images, labels, nn=True)
+        cnn.train(images[:10, ], labels[:10, ])
 
 if __name__ == "__main__":
     main()

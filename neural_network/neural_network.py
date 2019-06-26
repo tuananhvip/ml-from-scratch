@@ -4,10 +4,6 @@ Email: giangtran240896@gmail.com
 """
 
 import numpy as np
-import sys
-sys.path.append("..")
-
-from optimizations_algorithms.optimizers import SGD, SGDMomentum, RMSProp, Adam
 from nn_components.layers import FCLayer, ActivationLayer
 
 class NeuralNetwork:
@@ -39,7 +35,7 @@ class NeuralNetwork:
         for struct in nn_structure:
             num_neurons = struct["num_neurons"]
             weight_init = struct["weight_init"]
-            fc = FCLayer(num_neurons=num_neurons, optimizer=self.optimizer, weight_init=weight_init)
+            fc = FCLayer(num_neurons=num_neurons, weight_init=weight_init)
             layers.append(fc)
             if "activation" in struct:
                 activation = struct["activation"]
@@ -91,7 +87,7 @@ class NeuralNetwork:
         m = Y.shape[0]
         delta = (Y_hat - Y)/m # shape = (N, C)
         dW = self.layers[-3].output.T.dot(delta)
-        self.layers[-2].update_params(dW)
+        self.layers[-2].update_params(dW, self.optimizer)
         dA_prev = delta.dot(self.layers[-2].W.T)
         return dA_prev
 
@@ -114,8 +110,8 @@ class NeuralNetwork:
             if isinstance(self.layers[i], ActivationLayer):
                 dA_prev = self.layers[i].backward(dA_prev)
                 continue
-            dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1])
-        _ = self.layers[i-1].backward(dA_prev, X)
+            dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1], self.optimizer)
+        _ = self.layers[i-1].backward(dA_prev, X, self.optimizer)
 
     def train(self, train_X, train_Y):
         """
@@ -138,38 +134,3 @@ class NeuralNetwork:
         """
         y_hat = self._forward(test_X)
         return np.argmax(y_hat, axis=1)
-
-if __name__ == '__main__':
-    from utils import load_dataset_mnist, preprocess_data
-    from mnist_lib import MNIST
-
-    load_dataset_mnist()
-    mndata = MNIST('data_mnist')
-    training_phase = True
-    if training_phase:
-        images, labels = mndata.load_training()
-        images, labels = preprocess_data(images, labels)
-        epochs = 20
-        batch_size = 64
-        learning_rate = 0.1
-
-        sgd = SGD(learning_rate)
-        archs = [
-            {"num_neurons": 100, "weight_init": "he", "activation": "sigmoid"},
-            {"num_neurons": 125, "weight_init": "he", "activation": "sigmoid"},
-            {"num_neurons": 50, "weight_init": "he", "activation": "sigmoid"},
-            {"num_neurons": labels.shape[1], "weight_init": "he", "activation": "softmax"}]
-        nn = NeuralNetwork(epochs, batch_size, sgd, archs, False)
-        nn.train(images, labels)
-    else:
-        images_test, labels_test = mndata.load_testing()
-        images_test, labels_test = preprocess_data(images_test, labels_test, test=True)
-
-        pred = nn.predict(images_test)
-
-        print("Accuracy:", len(pred[labels_test == pred]) / len(pred))
-        from sklearn.metrics.classification import confusion_matrix
-
-        print("Confusion matrix: ")
-        print(confusion_matrix(labels_test, pred))
-

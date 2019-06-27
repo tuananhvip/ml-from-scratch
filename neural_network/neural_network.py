@@ -105,7 +105,6 @@ class NeuralNetwork:
             shape = (N, D).
         """
         dA_prev = self._backward_last(Y, Y_hat)
-
         for i in range(len(self.layers)-3, 0, -1):
             if isinstance(self.layers[i], ActivationLayer):
                 dA_prev = self.layers[i].backward(dA_prev)

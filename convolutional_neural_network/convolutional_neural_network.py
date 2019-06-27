@@ -3,17 +3,8 @@ Author: Giang Tran
 Email: giangtran204896@gmail.com
 """
 import numpy as np
-import sys
-sys.path.append("..")
-
-debug = True
-debug_path = "D:\ml_from_scratch"
-if debug:
-    sys.path.append(debug_path)
-
 from neural_network.neural_network import NeuralNetwork
 from nn_components.layers import ConvLayer, ActivationLayer, PoolingLayer, FlattenLayer, FCLayer
-from optimizations_algorithms.optimizers import SGD, SGDMomentum, RMSProp, Adam
 
 
 class CNN(NeuralNetwork):
@@ -104,45 +95,8 @@ class CNN(NeuralNetwork):
         """
         dA_prev = self._backward_last(Y, Y_hat)
         for i in range(len(self.layers)-3, 0, -1):
-            print(i)
             if isinstance(self.layers[i], FCLayer) or isinstance(self.layers[i], ConvLayer):
                 dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1], self.optimizer)
                 continue
             dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1])
         _ = self.layers[i-1].backward(dA_prev, X, self.optimizer)
-
-    def predict(self):
-        pass
-
-
-def main():
-    from libs.utils import load_dataset_mnist, preprocess_data
-    from libs.mnist_lib import MNIST
-    if debug:
-        load_dataset_mnist(debug_path + "/libs")
-        mndata = MNIST(debug_path + "/libs/data_mnist")
-    else:
-        load_dataset_mnist("../libs")
-        mndata = MNIST('../libs/data_mnist')
-    lenet_arch = [{"type": "conv", "filter_size": (5, 5), "filters": 6, "padding": "SAME", "stride": 1, "activation": "relu"},
-                {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
-                {"type": "conv", "filter_size": (5, 5), "filters": 16, "padding": "SAME", "stride": 1, "activation": "relu"},
-                {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
-                "flatten",
-                {"type": "fc", "num_neurons": 120, "weight_init": "std", "activation": "tanh"},
-                {"type": "fc", "num_neurons": 84, "weight_init": "std", "activation": "tanh"},
-                {"type": "fc", "num_neurons": 10, "weight_init": "std", "activation": "softmax"}
-                ]
-    epochs = 20
-    batch_size = 5
-    learning_rate = 0.1
-    sgd = SGD(learning_rate)
-    cnn = CNN(epochs=epochs, batch_size=batch_size, optimizer=sgd, cnn_structure=lenet_arch)
-    training_phase = True
-    if training_phase:
-        images, labels = mndata.load_training()
-        images, labels = preprocess_data(images, labels, nn=True)
-        cnn.train(images[:batch_size, ], labels[:batch_size, ])
-
-if __name__ == "__main__":
-    main()

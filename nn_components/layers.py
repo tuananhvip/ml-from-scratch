@@ -8,7 +8,7 @@ class Layer:
     def __init__(self):
         pass
 
-    def forward(self):
+    def forward(self, X):
         raise NotImplementedError("Child class must implement forward() function")
 
     def backward(self):
@@ -25,7 +25,7 @@ class FCLayer(Layer):
         num_neurons: (integer) number of neurons in the layer.
         weight_init: (string) either `he` initialization, `xavier` initialization or standard normal distribution.
         """
-        assert weight_init in ["std", "he", "xavier"], "Unknown weight intialization algorithm."
+        assert weight_init in ["std", "he", "xavier"], "Weight initialization must be in either `he` or `xavier` or `std`."
         self.num_neurons = num_neurons
         self.weight_init = weight_init
         self.output = None
@@ -59,6 +59,7 @@ class FCLayer(Layer):
         dA_prev: gradient of J respect to A[l+1] of the previous layer according the backward direction.
         prev_layer: previous layer according the forward direction.
         optimizer: (object) optimizer uses to optimize the loss function.
+        
         Returns
         -------
         dA_prev: gradient of J respect to A[l] at the current layer.
@@ -70,7 +71,6 @@ class FCLayer(Layer):
         grad = prev_layer.output.T.dot(dA_prev)
         self.update_params(grad, optimizer)
         dA_prev = dA_prev.dot(self.W.T)
-        print(dA_prev)
         return dA_prev
 
     def update_params(self, grad, optimizer):
@@ -94,10 +94,12 @@ class ConvLayer(Layer):
         weight_init: (string) either `he` initialization, `xavier` initialization or standard normal distribution.
         """
         assert len(filter_size) == 2, "Filter size must be a 2-elements tuple (width, height)."
+        assert weight_init in ["he", "xavier", "std"], "Weight initialization must be in either `he` or `xavier` or `std`."
         self.filter_size = filter_size
         self.filters = filters
         self.padding = padding
         self.stride = stride
+        self.weight_init = weight_init
         self.W = None
 
     def _conv_op(self, slice_a, slice_b):
@@ -124,11 +126,11 @@ class ConvLayer(Layer):
         """
         assert len(X.shape) == 4, "The shape of input image must be a 4-elements tuple (batch_size, height, width, channel)."
         if self.W is None:
-            self.W = np.random.normal(size=self.filter_size + (X.shape[-1], self.filters))
+            self.W = initialization_mapping[self.weight_init](weight_shape=self.filter_size + (X.shape[-1], self.filters))
         m, iW, iH, iC = X.shape
         fW, fH = self.filter_size
-        oW = (iW - fW)/self.stride + 1
-        oH = (iH - fH)/self.stride + 1
+        oW = int((iW - fW)/self.stride + 1)
+        oH = int((iH - fH)/self.stride + 1)
         if self.padding == "SAME":
             oW = iW
             oH = iH
@@ -149,18 +151,30 @@ class ConvLayer(Layer):
     def backward(self, dA_prev, prev_layer, optimizer):
         """
         Backward propagation of the conv layer.
+        
+        Parameters
+        ----------
+        dA_prev: gradient of J respect to A[l+1] of the previous layer according the backward direction.
+        prev_layer: previous layer according the forward direction.
+        
         """
         m, oW, oH, num_filts = self.output.shape
         fW, fH, fC, _ = self.W.shape
         dW = np.zeros(shape=(fW, fH, fC, num_filts))
-        dA_temp = np.zeros(shape=prev_layer.output.shape)
-        for f in range(num_filts):
-            for w in range(oW):
-                for h in range(oH):
-                    w_step = w*self.stride
-                    h_step = h*self.stride
-                    dW[:, :, :, f] += prev_layer.output[:, w_step:w_step+fW, h_step:h_step+fH, :] * dA_prev[:, w, h, f]
-                    dA_temp[:, w_step:w_step+fW, h_step:h_step+fH, :] += self.W[:, :, :, f] * dA_prev[:, w, h, f]
+        dA_temp = None
+        if type(prev_layer) is not np.ndarray:
+            dA_temp = np.zeros(shape=prev_layer.output.shape)
+        for i in range(m):
+            for f in range(num_filts):
+                for w in range(oW):
+                    for h in range(oH):
+                        w_step = w*self.stride
+                        h_step = h*self.stride
+                        if type(prev_layer) is np.ndarray:
+                            dW[:, :, :, f] += prev_layer[i, w_step:w_step+fW, h_step:h_step+fH, :] * dA_prev[i, w, h, f]    
+                            continue
+                        dW[:, :, :, f] += prev_layer.output[i, w_step:w_step+fW, h_step:h_step+fH, :] * dA_prev[i, w, h, f]
+                        dA_temp[i, w_step:w_step+fW, h_step:h_step+fH, :] += self.W[:, :, :, f] * dA_prev[i, w, h, f]
         self.update_params(dW, optimizer)
         return dA_temp
 
@@ -190,10 +204,6 @@ class PoolingLayer(Layer):
     def _pool_op(self, slice_a):
         """
         Pooling operation, either max pooling or average pooling.
-
-        Parameters
-        ----------
-        slice_a: a slice to compute pooling.
         """
         if self.mode == "max":
             return np.max(slice_a, axis=(1, 2))
@@ -202,7 +212,17 @@ class PoolingLayer(Layer):
 
     def forward(self, X):
         """
-        Pooling layer forward propagation. 
+        Pooling layer forward propagation. Through this layer, the input dimension will reduce:
+            oW = floor((iW - fW)/stride + 1)
+            oH = floor((iH - fH)/stride + 1)
+
+        Paramters
+        ---------
+        X: input tensor to this pooling layer. shape=(m, iW, iH, iC)
+
+        Returns
+        -------
+        Output tensor that has shape = (m, oW, oH, iC)
         """
         m, iW, iH, iC = X.shape
         fW, fH = self.filter_size
@@ -218,18 +238,34 @@ class PoolingLayer(Layer):
 
     def _mask_op(self, slice_a, slice_b, dA_prev):
         """
-        Compute mask for backpropgation that have the same dimension as previous layer in forward pass.
+        Compute mask for backpropgation that have the same dimension as previous layer in forward direction.
         """
         m, fW, fH, iC = slice_a.shape
         slice_temp = np.zeros(shape=slice_a.shape)
         for i in range(m):
             for c in range(iC):
-                slice_temp[i, :, :, c] = dA_prev[i, c]*(slice_a[i, :, :, c] == slice_b[i, c])
+                if self.mode == "max":
+                    slice_temp[i, :, :, c] = dA_prev[i, c]*(slice_a[i, :, :, c] == slice_b[i, c])
+                else:
+                    slice_temp[i, :, :, c] = dA_prev[i, c]/(fW*fH)
         return slice_temp
 
     def backward(self, dA_prev, prev_layer):
         """
         Pooling layer backward propagation.
+
+        Parameters
+        ----------
+        dA_prev: gradient of J respect to A[l+1] of the previous layer according the backward direction.
+        prev_layer: previous layer according the forward direction `l-1`.
+        
+        Returns
+        -------
+        Gradient of J respect to this pooling layer `l`. The shape out this gradient will equal the shape of prev_layer output
+                                                            with corresponding pooling type (max or avg).
+        E.g:
+            prev_layer output: [[1, 2],         then max: [[0, 0],      or avg: [[1/4, 2/4],
+                                [3, 4]]                    [0, 4]]               [3/4, 4/4]]
         """
         m, oW, oH, oC = self.output.shape
         fW, fH = self.filter_size
@@ -240,7 +276,6 @@ class PoolingLayer(Layer):
                 h_step = h*self.stride
                 dA_temp[:, w_step:w_step+fW, h_step:h_step+fH, :] = self._mask_op(prev_layer.output[:, w_step:w_step+fW,h_step:h_step+fH, :], 
                                                                                     self.output[:, w, h, :], dA_prev[:, w, h, :])
-                break
         return dA_temp
 
 
@@ -250,11 +285,17 @@ class FlattenLayer(Layer):
         pass
 
     def forward(self, X):
+        """
+        Flatten tensor `X` to a vector.
+        """
         m, iW, iH, iC = X.shape
         self.output = np.reshape(X, (m, iW*iH*iC))
         return self.output
 
     def backward(self, dA_prev, prev_layer):
+        """
+        Reshape dA_prev shape to prev_layer output shape in the backpropagation.
+        """
         m, iW, iH, iC = prev_layer.output.shape
         dA_prev = np.reshape(dA_prev, (m, iW, iH, iC))
         return dA_prev
@@ -272,10 +313,25 @@ class ActivationLayer(Layer):
         self.activation = activation
 
     def forward(self, X):
+        """
+        Activation layer forward propgation.
+        """
         self.output = eval(self.activation)(X)
         return self.output
 
     def backward(self, dA_prev, _):
+        """
+        Activation layer backward propagation.
+
+        Parameters
+        ---------- 
+        dA_prev: gradient of J respect to A[l+1] of the previous layer according the backward direction.
+        prev_layer: previous layer according the forward direction.
+        
+        Returns
+        -------
+        Gradient of J respect to type of activations (sigmoid, tanh, relu) in this layer `l`.
+        """
         dA_prev = dA_prev * eval(self.activation + "_grad")(self.output)
         return dA_prev
 

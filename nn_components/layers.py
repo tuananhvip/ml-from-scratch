@@ -70,6 +70,7 @@ class FCLayer(Layer):
         grad = prev_layer.output.T.dot(dA_prev)
         self.update_params(grad, optimizer)
         dA_prev = dA_prev.dot(self.W.T)
+        print(dA_prev)
         return dA_prev
 
     def update_params(self, grad, optimizer):
@@ -215,23 +216,33 @@ class PoolingLayer(Layer):
                 self.output[:, w, h, :] = self._pool_op(X[:, w_step:w_step+fW, h_step:h_step+fH, :])
         return self.output
 
-    def _create_mask(self, prev_layer):
-        m, iW, iH, iC = prev_layer.output.shape
-        m, oW, oH, oC = self.output.shape
-        fW, fH = self.filter_size
-        mask = np.zeros(shape=(m, iW, iH, iC))
-        for w in range(oW):
-            for h in range(oH):
-                w_step = w*self.stride
-                h_step = h*self.stride
-                mask[:, w_step:w_step+fW, h_step:h_step+fH, :] = 1*(prev_layer.output[:, w_step:w_step+fW, h_step:h_step+fH, :]                                                         == self.output[:, w, h, :])
-        return mask
+    def _mask_op(self, slice_a, slice_b, dA_prev):
+        """
+        Compute mask for backpropgation that have the same dimension as previous layer in forward pass.
+        """
+        m, fW, fH, iC = slice_a.shape
+        slice_temp = np.zeros(shape=slice_a.shape)
+        for i in range(m):
+            for c in range(iC):
+                slice_temp[i, :, :, c] = dA_prev[i, c]*(slice_a[i, :, :, c] == slice_b[i, c])
+        return slice_temp
 
     def backward(self, dA_prev, prev_layer):
         """
         Pooling layer backward propagation.
         """
-        mask = self._create_mask(prev_layer)
+        m, oW, oH, oC = self.output.shape
+        fW, fH = self.filter_size
+        dA_temp = np.zeros(shape=prev_layer.output.shape)
+        for w in range(oW):
+            for h in range(oH):
+                w_step = w*self.stride
+                h_step = h*self.stride
+                dA_temp[:, w_step:w_step+fW, h_step:h_step+fH, :] = self._mask_op(prev_layer.output[:, w_step:w_step+fW,h_step:h_step+fH, :], 
+                                                                                    self.output[:, w, h, :], dA_prev[:, w, h, :])
+                break
+        return dA_temp
+
 
 class FlattenLayer(Layer):
 
@@ -242,6 +253,11 @@ class FlattenLayer(Layer):
         m, iW, iH, iC = X.shape
         self.output = np.reshape(X, (m, iW*iH*iC))
         return self.output
+
+    def backward(self, dA_prev, prev_layer):
+        m, iW, iH, iC = prev_layer.output.shape
+        dA_prev = np.reshape(dA_prev, (m, iW, iH, iC))
+        return dA_prev
 
 
 class ActivationLayer(Layer):
@@ -259,9 +275,9 @@ class ActivationLayer(Layer):
         self.output = eval(self.activation)(X)
         return self.output
 
-    def backward(self, dA):
-        dA = dA * eval(self.activation + "_grad")(self.output)
-        return dA
+    def backward(self, dA_prev, _):
+        dA_prev = dA_prev * eval(self.activation + "_grad")(self.output)
+        return dA_prev
 
 
 class DropoutLayer(Layer):

@@ -124,9 +124,10 @@ class NeuralNetwork:
         """
         for e in range(self.epochs):
             Y_hat = self._forward(train_X)
-            self._backward(train_Y, Y_hat, train_X)
             loss = self._loss(train_Y, Y_hat)
             print("Loss epoch %d: %f" % (e+1, loss))
+            self._backward(train_Y, Y_hat, train_X)
+            
 
     def predict(self, test_X):
         """

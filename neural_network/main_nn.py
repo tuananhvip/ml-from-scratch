@@ -17,9 +17,9 @@ if training_phase:
 
     sgd = SGD(learning_rate)
     archs = [
-        {"num_neurons": 100, "weight_init": "he", "activation": "sigmoid"},
-        {"num_neurons": 125, "weight_init": "he", "activation": "sigmoid"},
-        {"num_neurons": 50, "weight_init": "he", "activation": "sigmoid"},
+        {"num_neurons": 100, "weight_init": "he", "activation": "sigmoid", "batch_norm": None},
+        {"num_neurons": 125, "weight_init": "he", "activation": "sigmoid", "batch_norm": None},
+        {"num_neurons": 50, "weight_init": "he", "activation": "sigmoid", "batch_norm": None},
         {"num_neurons": labels.shape[1], "weight_init": "he", "activation": "softmax"}]
     nn = NeuralNetwork(epochs, batch_size, sgd, archs, False)
     nn.train(images, labels)

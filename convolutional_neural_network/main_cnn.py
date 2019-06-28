@@ -16,9 +16,9 @@ def main():
     else:
         load_dataset_mnist("../libs")
         mndata = MNIST('../libs/data_mnist')
-    lenet_arch = [{"type": "conv", "filter_size": (5, 5), "filters": 6, "padding": "VALID", "stride": 1, "activation": "relu"},
+    lenet_arch = [{"type": "conv", "filter_size": (5, 5), "filters": 6, "padding": "SAME", "stride": 1, "activation": "relu"},
                 {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
-                {"type": "conv", "filter_size": (5, 5), "filters": 16, "padding": "VALID", "stride": 1, "activation": "relu"},
+                {"type": "conv", "filter_size": (5, 5), "filters": 16, "padding": "SAME", "stride": 1, "activation": "relu"},
                 {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
                 "flatten",
                 {"type": "fc", "num_neurons": 120, "weight_init": "std", "activation": "tanh"},
@@ -34,7 +34,7 @@ def main():
     if training_phase:
         images, labels = mndata.load_training()
         images, labels = preprocess_data(images, labels, nn=True)
-        cnn.train(images[:1000], labels[:1000])
+        cnn.train(images[:100], labels[:100])
 
 if __name__ == "__main__":
     main()

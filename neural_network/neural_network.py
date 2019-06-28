@@ -4,7 +4,7 @@ Email: giangtran240896@gmail.com
 """
 
 import numpy as np
-from nn_components.layers import FCLayer, ActivationLayer
+from nn_components.layers import FCLayer, ActivationLayer, BatchNormLayer
 
 class NeuralNetwork:
 
@@ -37,6 +37,9 @@ class NeuralNetwork:
             weight_init = struct["weight_init"]
             fc = FCLayer(num_neurons=num_neurons, weight_init=weight_init)
             layers.append(fc)
+            if "batch_norm" in struct:
+                bn_layer = BatchNormLayer()
+                layers.append(bn_layer)
             if "activation" in struct:
                 activation = struct["activation"]
                 act_layer = ActivationLayer(activation=activation)
@@ -107,7 +110,7 @@ class NeuralNetwork:
         dA_prev = self._backward_last(Y, Y_hat)
         for i in range(len(self.layers)-3, 0, -1):
             if isinstance(self.layers[i], ActivationLayer):
-                dA_prev = self.layers[i].backward(dA_prev)
+                dA_prev = self.layers[i].backward(dA_prev, None)
                 continue
             dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1], self.optimizer)
         _ = self.layers[i-1].backward(dA_prev, X, self.optimizer)

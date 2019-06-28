@@ -16,9 +16,9 @@ def main():
     else:
         load_dataset_mnist("../libs")
         mndata = MNIST('../libs/data_mnist')
-    lenet_arch = [{"type": "conv", "filter_size": (5, 5), "filters": 6, "padding": "SAME", "stride": 1, "activation": "relu"},
+    lenet_arch = [{"type": "conv", "filter_size": (5, 5), "filters": 6, "padding": "SAME", "stride": 1, "activation": "relu", "batch_norm": None},
                 {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
-                {"type": "conv", "filter_size": (5, 5), "filters": 16, "padding": "SAME", "stride": 1, "activation": "relu"},
+                {"type": "conv", "filter_size": (5, 5), "filters": 16, "padding": "SAME", "stride": 1, "activation": "relu", "batch_norm": None},
                 {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
                 "flatten",
                 {"type": "fc", "num_neurons": 120, "weight_init": "std", "activation": "tanh"},

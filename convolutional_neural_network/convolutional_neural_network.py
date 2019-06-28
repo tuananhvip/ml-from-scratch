@@ -4,7 +4,7 @@ Email: giangtran204896@gmail.com
 """
 import numpy as np
 from neural_network.neural_network import NeuralNetwork
-from nn_components.layers import ConvLayer, ActivationLayer, PoolingLayer, FlattenLayer, FCLayer
+from nn_components.layers import ConvLayer, ActivationLayer, PoolingLayer, FlattenLayer, FCLayer, BatchNormLayer
 
 
 class CNN(NeuralNetwork):
@@ -41,6 +41,9 @@ class CNN(NeuralNetwork):
                 stride = struct["stride"]
                 conv_layer = ConvLayer(filter_size, filters, padding, stride)
                 layers.append(conv_layer)
+                if "batch_norm" in struct:
+                    bn_layer = BatchNormLayer()
+                    layers.append(bn_layer)
                 if "activation" in struct:
                     activation = struct["activation"]
                     act_layer = ActivationLayer(activation=activation)
@@ -95,7 +98,7 @@ class CNN(NeuralNetwork):
         """
         dA_prev = self._backward_last(Y, Y_hat)
         for i in range(len(self.layers)-3, 0, -1):
-            if isinstance(self.layers[i], FCLayer) or isinstance(self.layers[i], ConvLayer):
+            if isinstance(self.layers[i], FCLayer) or isinstance(self.layers[i], ConvLayer) or isinstance(self.layers[i], BatchNormLayer):
                 dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1], self.optimizer)
                 continue
             dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1])

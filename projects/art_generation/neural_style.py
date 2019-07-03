@@ -69,11 +69,11 @@ def compute_layer_style_cost(a_S, a_G):
     return J_style_layer
 
 STYLE_LAYERS = [
-    ('conv2_1', 0.2),
+    ('conv1_2', 0.2),
     ('conv2_2', 0.2),
-    ('conv3_2', 0.2),
     ('conv3_3', 0.2),
-    ('conv4_2', 0.2)]
+    ('conv4_3', 0.2),
+    ('conv5_3', 0.2)]
 
 def compute_style_cost(model, STYLE_LAYERS):
     """
@@ -168,7 +168,7 @@ def main(image_content_file, image_style_file, iterations):
     sess.run(model['input'].assign(content_image))
 
     # Select the output tensor of layer conv4_2
-    out = model['conv4_2']
+    out = model['conv2_2']
 
     # Set a_C to be the hidden layer activation from the layer we have selected
     a_C = sess.run(out)

@@ -98,7 +98,7 @@ class CNN(NeuralNetwork):
         """
         dA_prev = self._backward_last(Y, Y_hat)
         for i in range(len(self.layers)-3, 0, -1):
-            if isinstance(self.layers[i], FCLayer) or isinstance(self.layers[i], ConvLayer) or isinstance(self.layers[i], BatchNormLayer):
+            if isinstance(self.layers[i], (FCLayer, ConvLayer, BatchNormLayer)):
                 dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1], self.optimizer)
                 continue
             dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1])

@@ -46,6 +46,7 @@ def rbf_kernel():
 def spam_classification():
     vocabs = load_vocabulary('vocab.txt')
     X, y = load_mat_file('spamTrain.mat')
+
     y = y.reshape((-1, 1))
     y = y.astype(np.double)
     y[y == 0] = -1
@@ -75,4 +76,4 @@ def spam_classification():
 
 # linear_kernel()
 # spam_classification()
-rbf_kernel()
+# rbf_kernel()

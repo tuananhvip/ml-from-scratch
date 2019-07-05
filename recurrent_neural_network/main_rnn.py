@@ -1,14 +1,16 @@
 import sys
-sys.path.append("D:\ml_from_scratch")
+sys.path.append("..")
+sys.path.append("/home/james/Desktop/ml-from-scratch")
 from recurrent_neural_network import RNN
 import numpy as np
 from keras.utils.np_utils import to_categorical
+from optimizations_algorithms.optimizers import SGD
 
 def main():
     start_token = " "
     pad_token = "#"
 
-    with open("D:\ml_from_scratch\\recurrent_neural_network\\names") as f:
+    with open("/home/james/Desktop/ml-from-scratch/recurrent_neural_network/names") as f:
         names = f.read()[:-1].split('\n')
         names = [start_token + name for name in names]
     print('number of samples:', len(names))
@@ -50,7 +52,10 @@ def main():
     train_X = input_sequences[:, :-1, :]
     train_Y = input_sequences[:, 1:, :]
 
-    rnn = RNN(hidden_units=64)
+    optimizer = SGD()
+    epochs = 2
+
+    rnn = RNN(hidden_units=64, epochs=epochs, optimizer=optimizer)
     rnn.train(train_X, train_Y)
 
 

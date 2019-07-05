@@ -1,18 +1,16 @@
 import sys
-sys.path.append("..")
+# sys.path.append("/home/james/Desktop/ml-from-scratch")
 from neural_network.neural_network import NeuralNetwork
 from nn_components.activations import softmax, tanh, sigmoid, tanh_grad
 import numpy as np
-from sklearn.preprocessing import OneHotEncoder
 
 
 class RNN(NeuralNetwork):
 
-    def __init__(self, hidden_units):
+    def __init__(self, hidden_units, epochs, optimizer):
         self.hidden_units = hidden_units
-        self.a_state = None 
-        self.Wa = None
-        self.Wy = None
+        self.optimizer = optimizer
+        self.epochs = epochs
 
     def _initialize_params(self, train_X, train_Y):
         m, time_steps, vector_len = train_X.shape
@@ -47,17 +45,24 @@ class RNN(NeuralNetwork):
         dWax = np.zeros(shape=self.Wax.shape)
         dba = np.zeros(shape=self.ba.shape)
         dA_chain = np.zeros(shape=self.A_state.shape)
+        da_state = np.zeros(shape=self.a_state.shape)
         for t in range(time_steps):
             dA_chain[:, t, :] = tanh_grad(self.A_state[:, t, :]).dot(self.Waa) # shape = (m, hidden_units)
         for t in reversed(range(time_steps)):
             delta = (Y_hat[:, t, :] - train_Y[:, t, :]) # shape = (m, vocab_len)
-            dWy += self.A_state[:, t, :].dot(delta)
+            dWy += self.A_state[:, t, :].T.dot(delta)
             dby += np.sum(delta, axis=0)
             for k in range(1, t):
-                dWaa += delta * np.prod(dA_chain[:, k+1:t, :], axis=1).dot(self.A_state[:, k-1, :].T.dot(tanh_grad(self.A_state[:, k, :]))
-                dWax
-                dba += delta * np.prod(dA_chain[:, k+1:t, :], axis=1).dot(np.sum(tanh_grad(self.A_state[:, k, :]), axis=0))
+                same_chain = (delta.dot(self.Wy.T) # shape=(m, hidden_units)
+                                * np.prod(dA_chain[:, k+1:t, :], axis=1) # shape=(m, hidden_units)
+                                * tanh_grad(self.A_state[:, k, :]) # shape=(m, hidden_units)
+                                )
+                dWaa += np.dot(self.A_state[:, k-1, :].T, same_chain)
 
+                dWax += np.dot(train_X[:, k, :].T, same_chain)
+                dba += np.sum(same_chain, axis=0)
+            da_state = np.dot(np.prod(dA_chain[:, :t, :], axis=1)*tanh_grad(self.a_state), self.Waa)
+        self.update_params(dWy, dby, dWaa, dWax, dba, da_state)
 
     def train(self, train_X, train_Y):
         """
@@ -67,10 +72,27 @@ class RNN(NeuralNetwork):
         m, time_steps, vector_len = train_X.shape
         self._initialize_params(train_X, train_Y)
         Y_hat = np.zeros(shape=train_Y.shape)
-        total_loss = 0
-        for t in range(time_steps):
-            loss_t, Y_hat_t, A_state_t = self._forward(train_X[:, t, :], train_Y[:, t, :])
-            total_loss += loss_t
-            Y_hat[:, t, :] = Y_hat_t
-            self.A_state[:, t, :] = A_state_t
-        print(total_loss)
+        for _ in range(self.epochs):
+            total_loss = 0
+            for t in range(time_steps):
+                loss_t, Y_hat_t, A_state_t = self._forward(train_X[:, t, :], train_Y[:, t, :])
+                total_loss += loss_t
+                Y_hat[:, t, :] = Y_hat_t
+                self.A_state[:, t, :] = A_state_t
+            print(total_loss)
+            self._backward(train_X, train_Y, Y_hat)
+
+    def update_params(self, dWy, dby, dWaa, dWax, dba, da_state):
+        dWy = self.optimizer.minimize(dWy)
+        dby = self.optimizer.minimize(dby)
+        dWaa = self.optimizer.minimize(dWaa)
+        dWax = self.optimizer.minimize(dWax)
+        dba = self.optimizer.minimize(dba)
+        da_state = self.optimizer.minimize(da_state)
+
+        self.Wy -= dWy
+        self.by -= dby
+        self.Waa -= dWaa
+        self.Wax -= dWax
+        self.ba -= dba
+        self.a_state -= da_state

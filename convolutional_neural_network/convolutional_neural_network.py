@@ -1,6 +1,7 @@
 """
 Author: Giang Tran
 Email: giangtran204896@gmail.com
+Docs: https://giangtranml.github.io/ml/machine-learning/convolutional-neural-network
 """
 import numpy as np
 from neural_network.neural_network import NeuralNetwork

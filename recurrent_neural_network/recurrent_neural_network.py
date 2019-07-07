@@ -1,3 +1,8 @@
+"""
+Author: Giang Tran
+Email: giangtran240896@gmail.com
+"""
+
 import sys
 # sys.path.append("/home/james/Desktop/ml-from-scratch")
 from neural_network.neural_network import NeuralNetwork

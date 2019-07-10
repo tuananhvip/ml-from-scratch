@@ -5,8 +5,7 @@ from recurrent_neural_network import RNN
 import numpy as np
 from keras.utils.np_utils import to_categorical
 from optimizations_algorithms.optimizers import SGD
-import keras
-from keras import layers as L
+
 
 def main():
     start_token = " "
@@ -57,22 +56,10 @@ def main():
     train_Y = input_sequences[:, 1:, :]
 
     optimizer = SGD()
-    epochs = 5
+    epochs = 20
 
     rnn = RNN(hidden_units=64, epochs=epochs, optimizer=optimizer)
     rnn.train(train_X, train_Y)
-    # model = keras.models.Sequential()
-    # model.add(L.InputLayer([None],dtype='int32'))
-    # model.add(L.Embedding(MAX_LENGTH, n_tokens))
-    # model.add(L.SimpleRNN(64,return_sequences=True))
-
-    # #add top layer that predicts tag probabilities
-    # stepwise_dense = L.Dense(n_tokens,activation='softmax')
-    # stepwise_dense = L.TimeDistributed(stepwise_dense)
-    # model.add(stepwise_dense)
-
-    # model.compile('adam','categorical_crossentropy', metrics=['acc'])
-    # model.fit(x=train_X, y=train_Y, epochs=10)
 
 
 if __name__ == "__main__":

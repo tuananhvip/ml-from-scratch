@@ -2,6 +2,8 @@
 Author: Giang Tran
 Email: giangtran240896@gmail.com
 Docs: https://giangtranml.github.io/ml/machine-learning/recurrent-neural-network
+
+Note: Not correctly implemented yet! 
 """
 
 import sys

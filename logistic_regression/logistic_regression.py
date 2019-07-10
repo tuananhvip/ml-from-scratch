@@ -8,24 +8,26 @@ import re
 import json
 import numpy as np
 from sklearn.model_selection import train_test_split
-from math import ceil
+import sys
+sys.path.append("..")
+from optimizations_algorithms.optimizers import SGD
+
 
 class LogisticRegression:
 
-    def __init__(self, epochs, batch_size, lr):
+    def __init__(self, epochs, optimizer, batch_size):
         """
         Constructor for logistic regression.
 
         Parameter
         ---------
-        :epochs: number of epoch to train logistic regression.
-        :batch_size: number of batch size each iteration.
-        :lr: learning rate hyperparameter.
+        epochs: number of epoch to train logistic regression.
+        optimizer: optimizer algorithm to update weights.
+        batch_size: number of batch size using each iteration.
         """
         self.epochs = epochs
-        self.lr = lr
+        self.optimizer = optimizer
         self.batch_size = batch_size
-        self.w = None
 
     def _sigmoid(self, X):
         """
@@ -61,30 +63,23 @@ class LogisticRegression:
         m = X.shape[0]
         return (X.T.dot(y_pred - y_true))/m
 
-    def _gradient_descent(self, grad):
-        """
-        Apply gradient to `w` and update it.
-        """
-        self.w = self.w - self.lr*grad
-
-    def _train(self, train_X, train_y):
+    def _train(self, X_train, y_train):
         """
         Main training function. 
         """
-        n = train_X.shape[0]
-        num_batches = ceil(n/self.batch_size)
         for e in range(self.epochs):
-            it = 0
             batch_loss = 0
-            while it < num_batches:
-                logits = self._sigmoid(train_X[it*self.batch_size:(it+1)*self.batch_size])
-                grad = self._gradient(train_X[it*self.batch_size:(it+1)*self.batch_size], 
-                                      train_y[it*self.batch_size:(it+1)*self.batch_size], logits)
-                self._gradient_descent(grad)
-                batch_loss += self._cross_entropy_loss(
-                    train_y[it*self.batch_size:(it+1)*self.batch_size], logits)
-                it += 1
-            print("Loss at epoch %s: %.2f" % (e+1, batch_loss/num_batches))
+            num_batches = 0
+            it = 0
+            while it < X_train.shape[0]:
+                y_hat = self._sigmoid(X_train[it:it+self.batch_size])
+                loss = self._cross_entropy_loss(y_train[it:it+self.batch_size], y_hat)
+                batch_loss += loss
+                grad = self._gradient(X_train[it:it+self.batch_size], y_train[it:it+self.batch_size], y_hat)
+                self.w -= self.optimizer.minimize(grad)
+                it += self.batch_size
+                num_batches += 1
+            print("Loss at epoch %s: %f" % (e + 1 , batch_loss / num_batches))
 
     def train(self, train_X, train_y):
         """
@@ -135,10 +130,11 @@ def main():
     ones = np.ones((n, 1))
     X = np.concatenate((X, ones), axis=1)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-    epochs = 50
+    epochs = 20
     learning_rate = 0.1
     batch_size = 64
-    logistic = LogisticRegression(epochs, batch_size, learning_rate)
+    optimizer = SGD(alpha=learning_rate)
+    logistic = LogisticRegression(epochs, optimizer, batch_size)
     logistic.train(X_train, y_train)
     pred = logistic.predict(X_test)
     y_test = y_test.reshape((-1, 1))

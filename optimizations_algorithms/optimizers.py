@@ -1,3 +1,8 @@
+"""
+Author: Giang Tran
+Email: giangtran240896@gmail.com
+Docs: https://giangtranml.github.io/ml/machine-learning/optimization-algorithms
+"""
 import numpy as np
 
 class _Optimizers: 

@@ -1,25 +1,42 @@
+"""
+Author: Giang Tran
+Email: giangtran240896@gmail.com
+Docs: https://giangtranml.github.io/ml/machine-learning/softmax-regression
+"""
 import numpy as np
+import sys
+sys.path.append("..")
+from libs.utils import load_dataset_mnist, preprocess_data
+from libs.mnist_lib import MNIST
+from optimizations_algorithms.optimizers import SGD
 
 
 class SoftmaxRegression:
 
-    def __init__(self, batch_size=64, epochs=100, learning_rate=0.01, ):
-        self.W = None
-        self.learning_rate = learning_rate
-        self.batch_size = batch_size
-        self.epochs = epochs
+    def __init__(self, optimizer, epochs, batch_size):
+        """
+        Constructor for softmax regression.
 
-    def cross_entropy_loss(self, y, y_hat):
+        Parameter
+        ---------
+        epochs: number of epoch to train logistic regression.
+        optimizer: optimizer algorithm to update weights.
+        batch_size: number of batch size using each iteration.
+        """
+        self.epochs = epochs
+        self.optimizer = optimizer
+        self.batch_size = batch_size
+        self.W = None
+
+    def _cross_entropy_loss(self, y, y_hat):
         """
         Compute cross entropy loss.
-
         Parameters
         ----------
         y: matrix of 1-hot label vectors.
                 Shape = (N, num_class).
         y_hat: predicted matrix from softmax function (probability over num_class). Sum(y_hat[i, :]) = 1.
                 Shape = (N, num_class)
-
         Returns
         -------
         Loss = y*log(y_hat). (element-wise).
@@ -30,16 +47,14 @@ class SoftmaxRegression:
         loss = -np.sum(np.sum(y * np.log(y_hat), axis=1))/y.shape[0]
         return loss
 
-    def softmax_function(self, X):
+    def _softmax_function(self, X):
         """
         Compute softmax function.
         z = X.dot(W) ==> shape = (N, num_class)
-
         Parameters
         ----------
         X: input variable.
             Shape = (N, D).
-
         Returns
         -------
         Softmax: e^z / sum(e^z).
@@ -50,10 +65,9 @@ class SoftmaxRegression:
         z = z - np.max(z, axis=1).reshape((z.shape[0], 1))
         return np.exp(z)/np.sum(np.exp(z), axis=1).reshape((z.shape[0], 1))
 
-    def gradient(self, X, y, y_hat):
+    def _gradient(self, X, y, y_hat):
         """
         Compute gradient matrix.
-
         Parameters
         ----------
         X: training set.
@@ -62,7 +76,6 @@ class SoftmaxRegression:
             Shape = (N, num_class).
         y_hat: predicted.
             Shape = (N, num_class).
-
         Returns
         -------
         Gradient of cross entropy loss respect to W: 1/N*(X.T.dot(y_hat - y))
@@ -71,31 +84,20 @@ class SoftmaxRegression:
         assert y.shape == y_hat.shape, "y and y_hat must be same shape."
         return X.T.dot(y_hat - y)/X.shape[0]
 
-    def gradient_descent(self, grad):
-        """
-        Update weights by gradient descent
-
-        Parameters
-        ----------
-        grad: gradient matrix of W.
-
-        """
-        self.W = self.W - self.learning_rate * grad
-
     def _train(self, X_train, y_train):
         for e in range(self.epochs):
             batch_loss = 0
             num_batches = 0
             it = 0
             while it < X_train.shape[0]:
-                y_hat = self.softmax_function(X_train[it:it+self.batch_size])
-                loss = self.cross_entropy_loss(y_train[it:it+self.batch_size], y_hat)
+                y_hat = self._softmax_function(X_train[it:it+self.batch_size])
+                loss = self._cross_entropy_loss(y_train[it:it+self.batch_size], y_hat)
                 batch_loss += loss
-                grad = self.gradient(X_train[it:it+self.batch_size], y_train[it:it+self.batch_size], y_hat)
-                self.gradient_descent(grad)
+                grad = self._gradient(X_train[it:it+self.batch_size], y_train[it:it+self.batch_size], y_hat)
+                self.W -= self.optimizer.minimize(grad)
                 it += self.batch_size
                 num_batches += 1
-            print("Loss at epoch %s %.2f" % (e + 1 , batch_loss / num_batches))
+            print("Loss at epoch %s: %f" % (e + 1 , batch_loss / num_batches))
 
     def train(self, X_train, y_train):
         assert X_train.shape[0] == y_train.shape[0], "X and y must have the same data points."
@@ -107,15 +109,14 @@ class SoftmaxRegression:
 
 
 if __name__ == '__main__':
-    from utils import load_dataset_mnist, preprocess_data
-    from mnist import MNIST
-
-    load_dataset_mnist()
-    mndata = MNIST('data_mnist')
+    load_dataset_mnist("../libs")
+    mndata = MNIST('../libs/data_mnist')
 
     images, labels = mndata.load_training()
     images, labels = preprocess_data(images, labels)
-    softmax = SoftmaxRegression(epochs=20)
+    optimizer = SGD(0.01)
+    batch_size = 64
+    softmax = SoftmaxRegression(optimizer=optimizer, epochs=20, batch_size=batch_size)
     softmax.train(images, labels)
 
     images_test, labels_test = mndata.load_testing()

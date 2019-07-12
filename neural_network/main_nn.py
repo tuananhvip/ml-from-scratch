@@ -5,7 +5,7 @@ from optimizations_algorithms.optimizers import SGD, SGDMomentum, RMSProp, Adam
 from neural_network import NeuralNetwork
 from libs.utils import load_dataset_mnist, preprocess_data
 from libs.mnist_lib import MNIST
-import pickle
+
 
 load_dataset_mnist("../libs")
 mndata = MNIST('../libs/data_mnist')
@@ -24,10 +24,11 @@ if training_phase:
         {"num_neurons": 125, "weight_init": "he", "activation": "sigmoid", "batch_norm": None},
         {"num_neurons": 50, "weight_init": "he", "activation": "sigmoid", "batch_norm": None},
         {"num_neurons": labels.shape[1], "weight_init": "he", "activation": "softmax"}]
-    nn = NeuralNetwork(epochs, batch_size, sgd, archs, False)
+    nn = NeuralNetwork(epochs, batch_size, sgd, archs)
     nn.train(images, labels)
     nn.save(weight_path)
 else:
+    import pickle
     images_test, labels_test = mndata.load_testing()
     images_test, labels_test = preprocess_data(images_test, labels_test, test=True)
     with open(weight_path, "rb") as f:

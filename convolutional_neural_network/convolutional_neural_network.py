@@ -21,14 +21,37 @@ class CNN(NeuralNetwork):
         optimizer: (object) optimizer class to use (gsd, gsd_momentum, rms_prop, adam)
         cnn_structure: (list) a list of dictionary of cnn architecture.
         """
-        self.epochs = epochs
-        self.batch_size = batch_size
-        self.optimizer = optimizer
-        self.layers = self._structure(cnn_structure) 
+        super().__init__(epochs, batch_size, optimizer, cnn_structure)
 
     def _structure(self, cnn_structure):
         """
-        Structure function that initializes cnn architecture.
+        Structure function that initializes CNN architecture.
+
+        Parameters
+        ----------
+        cnn_structure: (list) a list of dictionaries define CNN architecture.
+            Each dictionary element is 1 kind of layer (ConvLayer, FCLayer, PoolingLayer, FlattenLayer, BatchNormLayer).
+
+        - Convolutional layer (`type: conv`) dict should have following key-value pair:
+            + filter_size: (tuple) define conv filter size (fH, fW)
+            + filters: (int) number of conv filters at the layer.
+            + stride: (int) stride of conv filter.
+            + weight_init: (str) choose which kind to initialize the filter, either `he` `xavier` or `std`.
+            + padding: (str) padding type of input corresponding to the output, either `SAME` or `VALID`.
+            + activation (optional): (str) apply activation to the output of the layer. LINEAR -> ACTIVATION.
+            + batch_norm (optional): (any) apply batch norm to the output of the layer. LINEAR -> BATCH NORM -> ACTIVATION
+        
+        - Pooling layer (`type: pool`) dict should have following key-value pair:
+            + filter_size: (tuple) define pooling filter size (fH, fW).
+            + mode: (str) choose the mode of pooling, either `max` or `avg`.
+            + stride: (int) stride of pooling filter.
+
+        - Fully-connected layer (`type: fc`) dict should have following key-value pair:
+            + num_neurons: (int) define number of neurons in the dense layer.
+            + weight_init: (str) choose which kind to initialize the weight, either `he` `xavier` or `std`.
+            + activation (optional): (str) apply activation to the output of the layer. LINEAR -> ACTIVATION.
+            + batch_norm (optional): (any) apply batch norm to the output of the layer. LINEAR -> BATCH NORM -> ACTIVATION
+        
         """
         layers = []
         for struct in cnn_structure:
@@ -62,6 +85,9 @@ class CNN(NeuralNetwork):
                 weight_init = struct["weight_init"]
                 fc_layer = FCLayer(num_neurons=num_neurons, weight_init=weight_init)
                 layers.append(fc_layer)
+                if "batch_norm" in struct:
+                    bn_layer = BatchNormLayer()
+                    layers.append(bn_layer)    
                 if "activation" in struct:
                     activation = struct["activation"]
                     act_layer = ActivationLayer(activation)

@@ -109,83 +109,83 @@ class decoder:
 
     loss = tf.reduce_mean(xent * flat_loss_mask)  ### YOUR CODE HERE ###
 
-class final_model:
-    # CNN encoder
-    encoder, preprocess_for_model = get_cnn_encoder()
-    # intialize all variables
-    saver = tf.train.Saver()
-    saver.restore(s, get_checkpoint_path())  # keras applications corrupt our graph, so we restore trained weights
+# class final_model:
+#     # CNN encoder
+#     encoder, preprocess_for_model = get_cnn_encoder()
+#     # intialize all variables
+#     saver = tf.train.Saver()
+#     saver.restore(s, get_checkpoint_path())  # keras applications corrupt our graph, so we restore trained weights
     
-    # containers for current lstm state
-    lstm_c = tf.Variable(tf.zeros([1, LSTM_UNITS]), name="cell")
-    lstm_h = tf.Variable(tf.zeros([1, LSTM_UNITS]), name="hidden")
+#     # containers for current lstm state
+#     lstm_c = tf.Variable(tf.zeros([1, LSTM_UNITS]), name="cell")
+#     lstm_h = tf.Variable(tf.zeros([1, LSTM_UNITS]), name="hidden")
 
-    # input images
-    input_images = tf.placeholder('float32', [1, IMG_SIZE, IMG_SIZE, 3], name='images')
+#     # input images
+#     input_images = tf.placeholder('float32', [1, IMG_SIZE, IMG_SIZE, 3], name='images')
 
-    # get image embeddings
-    img_embeds = encoder(input_images)
+#     # get image embeddings
+#     img_embeds = encoder(input_images)
 
-    # initialize lstm state conditioned on image
-    init_c = init_h = decoder.img_embed_bottleneck_to_h0(decoder.img_embed_to_bottleneck(img_embeds))
-    init_lstm = tf.assign(lstm_c, init_c), tf.assign(lstm_h, init_h)
+#     # initialize lstm state conditioned on image
+#     init_c = init_h = decoder.img_embed_bottleneck_to_h0(decoder.img_embed_to_bottleneck(img_embeds))
+#     init_lstm = tf.assign(lstm_c, init_c), tf.assign(lstm_h, init_h)
     
-    # current word index
-    current_word = tf.placeholder('int32', [1], name='current_input')
+#     # current word index
+#     current_word = tf.placeholder('int32', [1], name='current_input')
 
-    # embedding for current word
-    word_embed = decoder.word_embed(current_word)
+#     # embedding for current word
+#     word_embed = decoder.word_embed(current_word)
 
-    # apply lstm cell, get new lstm states
-    new_c, new_h = decoder.lstm(word_embed, tf.nn.rnn_cell.LSTMStateTuple(lstm_c, lstm_h))[1]
+#     # apply lstm cell, get new lstm states
+#     new_c, new_h = decoder.lstm(word_embed, tf.nn.rnn_cell.LSTMStateTuple(lstm_c, lstm_h))[1]
 
-    # compute logits for next token
-    new_logits = decoder.token_logits(decoder.token_logits_bottleneck(new_h))
-    # compute probabilities for next token
-    new_probs = tf.nn.softmax(new_logits)
+#     # compute logits for next token
+#     new_logits = decoder.token_logits(decoder.token_logits_bottleneck(new_h))
+#     # compute probabilities for next token
+#     new_probs = tf.nn.softmax(new_logits)
 
-    # `one_step` outputs probabilities of next token and updates lstm hidden state
-    one_step = new_probs, tf.assign(lstm_c, new_c), tf.assign(lstm_h, new_h)
+#     # `one_step` outputs probabilities of next token and updates lstm hidden state
+#     one_step = new_probs, tf.assign(lstm_c, new_c), tf.assign(lstm_h, new_h)
 
-# this is an actual prediction loop
-def generate_caption(image, t=1, sample=False, max_len=20):
-    """
-    Generate caption for given image.
-    if `sample` is True, we will sample next token from predicted probability distribution.
-    `t` is a temperature during that sampling,
-        higher `t` causes more uniform-like distribution = more chaos.
-    """
-    # condition lstm on the image
+# # this is an actual prediction loop
+# def generate_caption(image, t=1, sample=False, max_len=20):
+#     """
+#     Generate caption for given image.
+#     if `sample` is True, we will sample next token from predicted probability distribution.
+#     `t` is a temperature during that sampling,
+#         higher `t` causes more uniform-like distribution = more chaos.
+#     """
+#     # condition lstm on the image
 
-    s.run(final_model.init_lstm, 
-          {final_model.input_images: [image]})
+#     s.run(final_model.init_lstm, 
+#           {final_model.input_images: [image]})
     
-    # current caption
-    # start with only START token
-    caption = [vocab[START]]
+#     # current caption
+#     # start with only START token
+#     caption = [vocab[START]]
     
-    for _ in range(max_len):
-        next_word_probs = s.run(final_model.one_step, 
-                                {final_model.current_word: [caption[-1]]})[0]
-        next_word_probs = next_word_probs.ravel()
+#     for _ in range(max_len):
+#         next_word_probs = s.run(final_model.one_step, 
+#                                 {final_model.current_word: [caption[-1]]})[0]
+#         next_word_probs = next_word_probs.ravel()
         
-        # apply temperature
-        next_word_probs = next_word_probs**(1/t) / np.sum(next_word_probs**(1/t))
+#         # apply temperature
+#         next_word_probs = next_word_probs**(1/t) / np.sum(next_word_probs**(1/t))
 
-        if sample:
-            next_word = np.random.choice(range(len(vocab)), p=next_word_probs)
-        else:
-            next_word = np.argmax(next_word_probs)
+#         if sample:
+#             next_word = np.random.choice(range(len(vocab)), p=next_word_probs)
+#         else:
+#             next_word = np.argmax(next_word_probs)
 
-        caption.append(next_word)
-        if next_word == vocab[END]:
-            break
+#         caption.append(next_word)
+#         if next_word == vocab[END]:
+#             break
        
-    return list(map(vocab_inverse.get, caption))
+#     return list(map(vocab_inverse.get, caption))
 
-def apply_model_to_image_raw_bytes(raw):
-    img = utils.decode_image_from_buf(raw)
-    img = utils.crop_and_preprocess(img, (IMG_SIZE, IMG_SIZE), final_model.preprocess_for_model)
-    print(' '.join(generate_caption(img)[1:-1]))
+# def apply_model_to_image_raw_bytes(raw):
+#     img = utils.decode_image_from_buf(raw)
+#     img = utils.crop_and_preprocess(img, (IMG_SIZE, IMG_SIZE), final_model.preprocess_for_model)
+#     print(' '.join(generate_caption(img)[1:-1]))
 
-apply_model_to_image_raw_bytes(open("mia.jpg", "rb").read())
+# apply_model_to_image_raw_bytes(open("mia.jpg", "rb").read())

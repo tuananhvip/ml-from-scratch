@@ -116,21 +116,27 @@ class NeuralNetwork:
             dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1], self.optimizer)
         _ = self.layers[i-1].backward(dA_prev, X, self.optimizer)
 
-    def train(self, train_X, train_Y):
+    def train(self, X_train, Y_train):
         """
         Training function.
 
         Parameters
         ----------
-        train_X: training dataset X.
-        train_Y: one-hot encoding label.
+        X_train: training dataset X.
+        Y_train: one-hot encoding label.
         """
         for e in range(self.epochs):
-            Y_hat = self._forward(train_X)
-            loss = self._loss(train_Y, Y_hat)
-            print("Loss epoch %d: %f" % (e+1, loss))
-            self._backward(train_Y, Y_hat, train_X)
-            
+            batch_loss = 0
+            num_batches = 0
+            it = 0
+            while it < X_train.shape[0]:
+                Y_hat = self._forward(X_train[it:it+self.batch_size])
+                self._backward(Y_train[it:it+self.batch_size], Y_hat, X_train[it:it+self.batch_size])
+                loss = self._loss(Y_train[it:it+self.batch_size], Y_hat)
+                batch_loss += loss
+                it += self.batch_size
+                num_batches += 1
+            print("Loss at epoch %s: %f" % (e + 1 , batch_loss / num_batches))            
 
     def predict(self, test_X):
         """
@@ -138,3 +144,8 @@ class NeuralNetwork:
         """
         y_hat = self._forward(test_X)
         return np.argmax(y_hat, axis=1)
+
+    def save(self, name):
+        import pickle
+        with open(name, "wb") as f:
+            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)

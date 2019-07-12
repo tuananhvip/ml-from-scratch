@@ -1,13 +1,16 @@
 import sys
 sys.path.append("..")
+import os
 from optimizations_algorithms.optimizers import SGD, SGDMomentum, RMSProp, Adam
 from neural_network import NeuralNetwork
 from libs.utils import load_dataset_mnist, preprocess_data
 from libs.mnist_lib import MNIST
+import pickle
 
 load_dataset_mnist("../libs")
 mndata = MNIST('../libs/data_mnist')
-training_phase = True
+weight_path = "nn_weights.pickle"
+training_phase = weight_path not in os.listdir(".")
 if training_phase:
     images, labels = mndata.load_training()
     images, labels = preprocess_data(images, labels)
@@ -23,10 +26,12 @@ if training_phase:
         {"num_neurons": labels.shape[1], "weight_init": "he", "activation": "softmax"}]
     nn = NeuralNetwork(epochs, batch_size, sgd, archs, False)
     nn.train(images, labels)
+    nn.save(weight_path)
 else:
     images_test, labels_test = mndata.load_testing()
     images_test, labels_test = preprocess_data(images_test, labels_test, test=True)
-
+    with open(weight_path, "rb") as f:
+        nn = pickle.load(f)
     pred = nn.predict(images_test)
 
     print("Accuracy:", len(pred[labels_test == pred]) / len(pred))

@@ -9,6 +9,7 @@ from nn_components.layers import ConvLayer, ActivationLayer, PoolingLayer, Flatt
 
 
 class CNN(NeuralNetwork):
+
     def __init__(self, epochs, batch_size, optimizer, cnn_structure):
         """
         A Convolutional Neural Network.
@@ -40,7 +41,8 @@ class CNN(NeuralNetwork):
                 filters = struct["filters"]
                 padding = struct["padding"]
                 stride = struct["stride"]
-                conv_layer = ConvLayer(filter_size, filters, padding, stride)
+                weight_init = struct["weight_init"]
+                conv_layer = ConvLayer(filter_size, filters, padding, stride, weight_init)
                 layers.append(conv_layer)
                 if "batch_norm" in struct:
                     bn_layer = BatchNormLayer()

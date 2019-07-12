@@ -9,15 +9,15 @@ from convolutional_neural_network import CNN
 def main():
     load_dataset_mnist("../libs")
     mndata = MNIST('../libs/data_mnist')
-    arch = [{"type": "conv", "filter_size": (3, 3), "filters": 6, "padding": "SAME", "stride": 1, "activation": "relu", "weight_init": "he"},
+    arch = [{"type": "conv", "filter_size": (3, 3), "filters": 6, "padding": "SAME", "stride": 1, "activation": "sigmoid", "weight_init": "he", "batch_norm": None},
             {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
-            {"type": "conv", "filter_size": (3, 3), "filters": 16, "padding": "SAME", "stride": 1, "activation": "relu", "weight_init": "he"},
+            {"type": "conv", "filter_size": (3, 3), "filters": 16, "padding": "SAME", "stride": 1, "activation": "sigmoid", "weight_init": "he", "batch_norm": None},
             {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
-            {"type": "conv", "filter_size": (3, 3), "filters": 32, "padding": "SAME", "stride": 1, "activation": "relu", "weight_init": "he"},
+            {"type": "conv", "filter_size": (3, 3), "filters": 32, "padding": "SAME", "stride": 1, "activation": "sigmoid", "weight_init": "he", "batch_norm": None},
             {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
             "flatten",
-            {"type": "fc", "num_neurons": 128, "weight_init": "he", "activation": "relu"},
-            {"type": "fc", "num_neurons": 64, "weight_init": "he", "activation": "relu"},
+            {"type": "fc", "num_neurons": 128, "weight_init": "he", "activation": "sigmoid", "batch_norm": None}, # use "batch_norm": None
+            {"type": "fc", "num_neurons": 64, "weight_init": "he", "activation": "sigmoid", "batch_norm": None},
             {"type": "fc", "num_neurons": 10, "weight_init": "he", "activation": "softmax"}
             ]
     epochs = 5
@@ -31,6 +31,7 @@ def main():
         images, labels = mndata.load_training()
         images, labels = preprocess_data(images, labels, nn=True)
         cnn.train(images[:10000], labels[:10000])
+        cnn.save(weight_path)
     else:
         import pickle
         images_test, labels_test = mndata.load_testing()

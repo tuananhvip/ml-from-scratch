@@ -27,7 +27,7 @@ def main():
     if training_phase:
         images, labels = mndata.load_training()
         images, labels = preprocess_data(images, labels, nn=True)
-        cnn.train(images[:100], labels[:100])
+        cnn.train(images[:10000], labels[:10000])
 
 if __name__ == "__main__":
     main()

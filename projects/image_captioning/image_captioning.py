@@ -1,30 +1,34 @@
-import tensorflow as tf
-import keras
-import os
-import utils
-import numpy as np
+#!/usr/bin/env python
+# coding: utf-8
+import sys
+sys.path.append("..")
 
+import tensorflow as tf
+from tensorflow.contrib import keras
+import numpy as np
+import matplotlib.pyplot as plt
 L = keras.layers
 K = keras.backend
+import utils
+import os
 
-IMG_SIZE = 300
-IMG_EMBED_SIZE = 2048
-IMG_EMBED_BOTTLENECK = 120
-WORD_EMBED_SIZE = 100
-LSTM_UNITS = 300
-LOGIT_BOTTLENECK = 120
-START = "#START#"
-END = "#END#"
-PAD = "#PAD#"
+def reset_tf_session():
+    curr_session = tf.get_default_session()
+    # close current session
+    if curr_session is not None:
+        curr_session.close()
+    # reset graph
+    K.clear_session()
+    # create new session
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    s = tf.InteractiveSession(config=config)
+    K.set_session(s)
+    return s
 
-vocab = utils.read_pickle("vocab.pickle")
-vocab_inverse = utils.read_pickle("vocab_inverse.pickle")
-
-pad_idx = vocab[PAD]
-s = tf.Session()
-
+CHECKPOINT_ROOT = "saved_model/"
 def get_checkpoint_path():
-    return os.path.abspath("weights")
+    return os.path.abspath(CHECKPOINT_ROOT + "weights")
 
 # we take the last hidden layer of IncetionV3 as an image embedding
 def get_cnn_encoder():
@@ -34,6 +38,26 @@ def get_cnn_encoder():
 
     model = keras.models.Model(model.inputs, keras.layers.GlobalAveragePooling2D()(model.output))
     return model, preprocess_for_model
+
+# special tokens  
+UNK = "#UNK#"
+START = "#START#"
+END = "#END#"
+PAD = "#PAD#"
+
+# prepare vocabulary
+vocab = utils.read_pickle("vocab.pickle")
+vocab_inverse = utils.read_pickle("vocab_inverse.pickle")
+      
+IMG_SIZE = 300
+IMG_EMBED_SIZE = 2048
+IMG_EMBED_BOTTLENECK = 128
+WORD_EMBED_SIZE = 100
+LSTM_UNITS = 300
+LOGIT_BOTTLENECK = 120
+pad_idx = vocab[PAD]
+
+s = reset_tf_session()
 
 class decoder:
     # [batch_size, IMG_EMBED_SIZE] of CNN image features
@@ -107,13 +131,13 @@ class decoder:
     # we don't want to account misclassification of PAD tokens, because that doesn't make sense,
     # we have PAD tokens for batching purposes only!
 
-    loss = tf.reduce_mean(xent * flat_loss_mask)  ### YOUR CODE HERE ###
+    loss = tf.reduce_mean(xent * flat_loss_mask)
+
+saver = tf.train.Saver()
 
 class final_model:
     # CNN encoder
     encoder, preprocess_for_model = get_cnn_encoder()
-    # intialize all variables
-    saver = tf.train.Saver()
     saver.restore(s, get_checkpoint_path())  # keras applications corrupt our graph, so we restore trained weights
     
     # containers for current lstm state
@@ -156,7 +180,6 @@ def generate_caption(image, t=1, sample=False, max_len=20):
         higher `t` causes more uniform-like distribution = more chaos.
     """
     # condition lstm on the image
-
     s.run(final_model.init_lstm, 
           {final_model.input_images: [image]})
     
@@ -183,6 +206,7 @@ def generate_caption(image, t=1, sample=False, max_len=20):
        
     return list(map(vocab_inverse.get, caption))
 
+# look at validation prediction example
 def apply_model_to_image_raw_bytes(raw):
     img = utils.decode_image_from_buf(raw)
     img = utils.crop_and_preprocess(img, (IMG_SIZE, IMG_SIZE), final_model.preprocess_for_model)

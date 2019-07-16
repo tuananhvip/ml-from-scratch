@@ -1,11 +1,6 @@
 numpy
+keras
 tensorflow
-matplotlib
-sklearn
-python-mnist
-jupyter
-requests
-cvxopt
 pandas
+scikit-learn
 scipy
-opencv-python

@@ -56,9 +56,10 @@ def main():
     train_Y = input_sequences[:, 1:, :]
 
     optimizer = SGD()
-    epochs = 20
+    epochs = 5
+    batch_size = 32
 
-    rnn = RNN(hidden_units=64, epochs=epochs, optimizer=optimizer)
+    rnn = RNN(hidden_units=64, epochs=epochs, optimizer=optimizer, batch_size=batch_size)
     rnn.train(train_X, train_Y)
 
 

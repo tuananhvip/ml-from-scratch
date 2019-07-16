@@ -6,10 +6,11 @@ Docs: https://giangtranml.github.io/ml/machine-learning/neural-network
 
 import numpy as np
 from nn_components.layers import FCLayer, ActivationLayer, BatchNormLayer
+from tqdm import tqdm
 
 class NeuralNetwork:
 
-    def __init__(self, epochs, batch_size, optimizer, nn_structure, batch_norm):
+    def __init__(self, epochs, batch_size, optimizer, nn_structure):
         """
         Deep neural network architecture.
 
@@ -20,17 +21,26 @@ class NeuralNetwork:
         optimizer: (object) optimizer object uses to optimize the loss.
         nn_structure: A list of 2-element tuple (num_neuron, activation)
                  represents neural network architecture.
-        batch_norm: use batch normalization in neural network.
         """
         self.epochs = epochs
         self.batch_size = batch_size
         self.optimizer = optimizer
-        self.batch_norm = batch_norm
         self.layers = self._structure(nn_structure)
 
     def _structure(self, nn_structure):
         """
         Structure function that initializes neural network architecture.
+
+        Parameters
+        ----------
+        nn_structure: (list) a list of dictionaries define Neural Network architecture.
+
+        - Each dict element in the list should have following key-pair value:
+            + num_neurons: (int) define number of neurons in the dense layer.
+            + weight_init: (str) choose which kind to initialize the weight, either `he` `xavier` or `std`.
+            + activation (optional): (str) apply activation to the output of the layer. LINEAR -> ACTIVATION.
+            + batch_norm (optional): (any) apply batch norm to the output of the layer. LINEAR -> BATCH NORM -> ACTIVATION.
+        
         """
         layers = []
         for struct in nn_structure:
@@ -116,21 +126,27 @@ class NeuralNetwork:
             dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1], self.optimizer)
         _ = self.layers[i-1].backward(dA_prev, X, self.optimizer)
 
-    def train(self, train_X, train_Y):
+    def train(self, X_train, Y_train):
         """
         Training function.
 
         Parameters
         ----------
-        train_X: training dataset X.
-        train_Y: one-hot encoding label.
+        X_train: training dataset X.
+        Y_train: one-hot encoding label.
         """
         for e in range(self.epochs):
-            Y_hat = self._forward(train_X)
-            loss = self._loss(train_Y, Y_hat)
-            print("Loss epoch %d: %f" % (e+1, loss))
-            self._backward(train_Y, Y_hat, train_X)
-            
+            batch_loss = 0
+            num_batches = 0
+            pbar = tqdm(range(0, X_train.shape[0], self.batch_size), desc="Epoch " + str(e+1))
+            for it in pbar:
+                Y_hat = self._forward(X_train[it:it+self.batch_size])
+                self._backward(Y_train[it:it+self.batch_size], Y_hat, X_train[it:it+self.batch_size])
+                loss = self._loss(Y_train[it:it+self.batch_size], Y_hat)
+                batch_loss += loss
+                num_batches += 1
+                pbar.set_description("Epoch " +str(e+1) + " - Loss: %.4f" % (batch_loss/num_batches))
+            print("Loss at epoch %s: %f" % (e + 1 , batch_loss / num_batches))            
 
     def predict(self, test_X):
         """
@@ -138,3 +154,8 @@ class NeuralNetwork:
         """
         y_hat = self._forward(test_X)
         return np.argmax(y_hat, axis=1)
+
+    def save(self, name):
+        import pickle
+        with open(name, "wb") as f:
+            pickle.dump(self, f, pickle.HIGHEST_PROTOCOL)

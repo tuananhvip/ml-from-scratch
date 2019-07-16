@@ -52,7 +52,7 @@ class FCLayer(Layer):
         """
         Layer backward level. Compute gradient respect to W and update it.
         Also compute gradient respect to X for computing gradient of previous
-        layers.
+        layers as the forward direction [l-1].
 
         Parameters
         ----------
@@ -91,7 +91,7 @@ class ConvLayer(Layer):
         padding: use padding to keep output dimension = input dimension .
                     whether 'SAME' or 'VALID'.
         stride: stride of the filters.
-        weight_init: (string) either `he` initialization, `xavier` initialization or standard normal distribution.
+        weight_init: (string) either `he` initialization, `xavier` initialization or `std` standard normal distribution.
         """
         assert len(filter_size) == 2, "Filter size must be a 2-elements tuple (width, height)."
         assert weight_init in ["he", "xavier", "std"], "Weight initialization must be in either `he` or `xavier` or `std`."
@@ -106,7 +106,7 @@ class ConvLayer(Layer):
         """
         Convolutional operation of 2 slices.
         """
-        return np.sum(slice_a*slice_b)
+        return np.sum(slice_a*slice_b, axis=(1, 2, 3))
 
     def _pad_input(self, inp):
         """
@@ -259,7 +259,6 @@ class PoolingLayer(Layer):
             for c in range(iC):
                 if self.mode == "max":
                     slice_temp[i, :, :, c] = d_prev[i, c]*(slice_a[i, :, :, c] == slice_b[i, c])
-                    np.equal
                 else:
                     slice_temp[i, :, :, c] = d_prev[i, c]/(fW*fH)
         return slice_temp

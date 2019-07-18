@@ -4,7 +4,7 @@ import sys
 sys.path.append("..")
 
 import tensorflow as tf
-from tensorflow.contrib import keras
+import keras
 import numpy as np
 import matplotlib.pyplot as plt
 L = keras.layers

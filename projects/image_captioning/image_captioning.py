@@ -4,7 +4,7 @@ import sys
 sys.path.append("..")
 
 import tensorflow as tf
-import keras
+import tensorflow.keras as keras
 import numpy as np
 import matplotlib.pyplot as plt
 L = keras.layers
@@ -76,8 +76,8 @@ class decoder:
                                          activation='elu')
     # word -> embedding
     word_embed = L.Embedding(len(vocab), WORD_EMBED_SIZE)
-    # lstm cell (from tensorflow)
-    lstm = tf.nn.rnn_cell.LSTMCell(LSTM_UNITS)
+    # lstm cell 
+    lstm_cell = L.LSTMCell(LSTM_UNITS)
     
     # we use bottleneck here to reduce model complexity
     # lstm output -> logits bottleneck
@@ -90,55 +90,44 @@ class decoder:
     
     # initial lstm cell state of shape (None, LSTM_UNITS),
     # we need to condition it on `img_embeds` placeholder.
-    c0 = h0 = img_embed_bottleneck_to_h0(img_embed_to_bottleneck(img_embeds)) ### YOUR CODE HERE ###
+    c0 = h0 = img_embed_bottleneck_to_h0(img_embed_to_bottleneck(img_embeds))
 
     # embed all tokens but the last for lstm input,
     # remember that L.Embedding is callable,
     # use `sentences` placeholder as input.
-    word_embeds = word_embed(sentences[:, :-1]) ### YOUR CODE HERE ###
+    word_embeds = word_embed(sentences[:, :-1])
 
     # during training we use ground truth tokens `word_embeds` as context for next token prediction.
-    # that means that we know all the inputs for our lstm and can get 
-    # all the hidden states with one tensorflow operation (tf.nn.dynamic_rnn).
-    # `hidden_states` has a shape of [batch_size, time steps, LSTM_UNITS].
-    hidden_states, _ = tf.nn.dynamic_rnn(lstm, word_embeds, initial_state=tf.nn.rnn_cell.LSTMStateTuple(c0, h0))
-
-    # now we need to calculate token logits for all the hidden states
+    # `out_hidden_states` has a shape of [batch_size, time steps, LSTM_UNITS].
+    lstm = L.RNN(lstm_cell, return_sequences=True, return_state=True)
+    out_hidden_states, _, _ = lstm(word_embeds, initial_state=[c0, h0])
     
+    # now we need to calculate token logits for all the hidden states
     # first, we reshape `hidden_states` to [-1, LSTM_UNITS]
-    flat_hidden_states = tf.reshape(hidden_states, shape=(-1, LSTM_UNITS)) ### YOUR CODE HERE ###
+    flat_hidden_states = tf.reshape(out_hidden_states, shape=(-1, LSTM_UNITS))
 
     # then, we calculate logits for next tokens using `token_logits_bottleneck` and `token_logits` layers
-    flat_token_logits = token_logits(token_logits_bottleneck(flat_hidden_states)) ### YOUR CODE HERE ###
+    flat_token_logits = token_logits(token_logits_bottleneck(flat_hidden_states))
 
     # then, we flatten the ground truth token ids.
     # remember, that we predict next tokens for each time step,
     # use `sentences` placeholder.
-    flat_ground_truth = tf.reshape(sentences[:, 1:], shape=(-1,)) ##YOUR CODE HERE ###
+    flat_ground_truth = tf.reshape(sentences[:, 1:], shape=(-1,))
 
-    # we need to know where we have real tokens (not padding) in `flat_ground_truth`,
-    # we don't want to propagate the loss for padded output tokens,
-    # fill `flat_loss_mask` with 1.0 for real tokens (not pad_idx) and 0.0 otherwise.
-    flat_loss_mask = tf.cast(tf.not_equal(flat_ground_truth, pad_idx), dtype='float32') ### YOUR CODE HERE ###
-    
     # compute cross-entropy between `flat_ground_truth` and `flat_token_logits` predicted by lstm
     xent = tf.nn.sparse_softmax_cross_entropy_with_logits(
         labels=flat_ground_truth, 
         logits=flat_token_logits
     )
 
-    # compute average `xent` over tokens with nonzero `flat_loss_mask`.
-    # we don't want to account misclassification of PAD tokens, because that doesn't make sense,
-    # we have PAD tokens for batching purposes only!
-
-    loss = tf.reduce_mean(xent * flat_loss_mask)
+    loss = tf.reduce_mean(xent) 
 
 saver = tf.train.Saver()
 
 class final_model:
     # CNN encoder
     encoder, preprocess_for_model = get_cnn_encoder()
-    saver.restore(s, get_checkpoint_path())  # keras applications corrupt our graph, so we restore trained weights
+    saver.restore(s, get_checkpoint_path())
     
     # containers for current lstm state
     lstm_c = tf.Variable(tf.zeros([1, LSTM_UNITS]), name="cell")
@@ -155,50 +144,42 @@ class final_model:
     init_lstm = tf.assign(lstm_c, init_c), tf.assign(lstm_h, init_h)
     
     # current word index
-    current_word = tf.placeholder('int32', [1], name='current_input')
+    current_word = tf.placeholder('int32', [1, 1], name='current_input')
 
     # embedding for current word
     word_embed = decoder.word_embed(current_word)
-
-    # apply lstm cell, get new lstm states
-    new_c, new_h = decoder.lstm(word_embed, tf.nn.rnn_cell.LSTMStateTuple(lstm_c, lstm_h))[1]
+    
+    # compute lstm 
+    out_hidden, new_h, new_c = decoder.lstm(word_embed, initial_state=(lstm_h, lstm_c))
 
     # compute logits for next token
-    new_logits = decoder.token_logits(decoder.token_logits_bottleneck(new_h))
+    new_logits = decoder.token_logits(decoder.token_logits_bottleneck(out_hidden))
+    
     # compute probabilities for next token
     new_probs = tf.nn.softmax(new_logits)
 
-    # `one_step` outputs probabilities of next token and updates lstm hidden state
-    one_step = new_probs, tf.assign(lstm_c, new_c), tf.assign(lstm_h, new_h)
+    # assign state_h and state_c for next prediction
+    assign_c = tf.assign(lstm_c, tf.reshape(new_c, shape=(1, LSTM_UNITS)))
+    assign_h = tf.assign(lstm_h, tf.reshape(new_h, shape=(1, LSTM_UNITS)))
 
 # this is an actual prediction loop
-def generate_caption(image, t=1, sample=False, max_len=20):
+def generate_caption(image, max_len=20):
     """
     Generate caption for given image.
-    if `sample` is True, we will sample next token from predicted probability distribution.
-    `t` is a temperature during that sampling,
-        higher `t` causes more uniform-like distribution = more chaos.
     """
-    # condition lstm on the image
     s.run(final_model.init_lstm, 
           {final_model.input_images: [image]})
     
     # current caption
     # start with only START token
     caption = [vocab[START]]
-    
+   
     for _ in range(max_len):
-        next_word_probs = s.run(final_model.one_step, 
-                                {final_model.current_word: [caption[-1]]})[0]
+        next_word_probs, _, _ = s.run([final_model.new_probs, final_model.assign_c, final_model.assign_h], 
+                                {final_model.current_word: [[caption[-1]]]})
         next_word_probs = next_word_probs.ravel()
         
-        # apply temperature
-        next_word_probs = next_word_probs**(1/t) / np.sum(next_word_probs**(1/t))
-
-        if sample:
-            next_word = np.random.choice(range(len(vocab)), p=next_word_probs)
-        else:
-            next_word = np.argmax(next_word_probs)
+        next_word = np.argmax(next_word_probs)
 
         caption.append(next_word)
         if next_word == vocab[END]:

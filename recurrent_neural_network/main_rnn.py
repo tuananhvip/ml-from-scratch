@@ -1,13 +1,13 @@
 import sys
 sys.path.append("..")
-# sys.path.append("/home/james/Desktop/ml-from-scratch")
 from recurrent_neural_network import RNN
 import numpy as np
 from keras.utils.np_utils import to_categorical
 from optimizations_algorithms.optimizers import SGD
+from rnn_keras import RNNKeras
 
 
-def main():
+def main(use_keras=False):
     start_token = " "
     pad_token = "#"
 
@@ -23,15 +23,16 @@ def main():
         temp_name = set(list(name))
         for t_n in temp_name:
             tokens.add(t_n)
-    tokens.add("#")
+    
         
-    tokens = list(tokens)
+    tokens = [pad_token] + list(tokens)
     n_tokens = len(tokens)
     print ('n_tokens:', n_tokens)
 
     token_to_id = dict() 
     for ind, token in enumerate(tokens):
         token_to_id[token] = ind
+    print(token_to_id[pad_token])
 
     def to_matrix(names, max_len=None, pad=token_to_id[pad_token], dtype=np.int32):
         """Casts a list of names into rnn-digestable padded matrix"""
@@ -52,16 +53,22 @@ def main():
     for i in range(m):
         input_sequences[i] = to_categorical(matrix_sequences[i], n_tokens, dtype='int32')
     del matrix_sequences
-    train_X = input_sequences[:, :-1, :]
+    if not use_keras:
+        train_X = input_sequences[:, :-1, :]
     train_Y = input_sequences[:, 1:, :]
 
-    optimizer = SGD()
-    epochs = 5
+    epochs = 20
     batch_size = 32
-
-    rnn = RNN(hidden_units=64, epochs=epochs, optimizer=optimizer, batch_size=batch_size)
+    learning_rate = 0.01
+    if use_keras:
+        from keras.optimizers import SGD
+        optimizer = SGD(lr=learning_rate)
+        rnn = RNNKeras(hidden_units=64, epochs=epochs, optimizer=optimizer, batch_size=batch_size)
+    else:
+        optimizer = SGD(alpha=learning_rate)
+        rnn = RNN(hidden_units=64, epochs=epochs, optimizer=optimizer, batch_size=batch_size)
     rnn.train(train_X, train_Y)
 
 
 if __name__ == "__main__":
-    main()
+    main(use_keras=True)

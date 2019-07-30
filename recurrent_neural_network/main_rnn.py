@@ -61,8 +61,8 @@ def main(use_keras=False):
     batch_size = 32
     learning_rate = 0.01
     if use_keras:
-        from keras.optimizers import SGD
-        optimizer = SGD(lr=learning_rate)
+        from keras.optimizers import SGD as SGDKeras
+        optimizer = SGDKeras(lr=learning_rate)
         rnn = RNNKeras(hidden_units=64, epochs=epochs, optimizer=optimizer, batch_size=batch_size)
     else:
         optimizer = SGD(alpha=learning_rate)
@@ -71,4 +71,4 @@ def main(use_keras=False):
 
 
 if __name__ == "__main__":
-    main(use_keras=True)
+    main(use_keras=False)

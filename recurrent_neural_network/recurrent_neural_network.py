@@ -5,7 +5,6 @@ Docs: https://giangtranml.github.io/ml/machine-learning/recurrent-neural-network
 """
 
 import sys
-# sys.path.append("/home/james/Desktop/ml-from-scratch")
 from neural_network.neural_network import NeuralNetwork
 from nn_components.activations import softmax, tanh, sigmoid, tanh_grad
 import numpy as np

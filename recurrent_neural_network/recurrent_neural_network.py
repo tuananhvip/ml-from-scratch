@@ -9,7 +9,7 @@ from neural_network.neural_network import NeuralNetwork
 from nn_components.activations import softmax, tanh, sigmoid, tanh_grad
 import numpy as np
 from tqdm import tqdm
-
+from optimizations_algorithms.optimizers import SGD
 
 class RNN(NeuralNetwork):
 
@@ -20,21 +20,7 @@ class RNN(NeuralNetwork):
         self.hidden_units = hidden_units
         self.optimizer = optimizer
         self.epochs = epochs
-        self.batch_size = batch_size
-
-    def _initialize_params(self, X_train, Y_train):
-        """
-        Initialize all neccessary parameters once at the start.
-        """
-        m, time_steps, vector_len = X_train.shape
-        _, _, vocab_len = Y_train.shape
-        self.Wax = np.random.normal(size=(vector_len, self.hidden_units))
-        self.Waa = np.random.normal(size=(self.hidden_units, self.hidden_units))
-        self.Wy = np.random.normal(size=(self.hidden_units, vocab_len))
-        self.ba = np.zeros(shape=(1, self.hidden_units))
-        self.by = np.zeros(shape=(1, vocab_len))
-        self.A_state = np.zeros(shape=(m, time_steps, self.hidden_units))
-        self.a_state = np.zeros(shape=(m, self.hidden_units))
+        self.batch_size = batch_size    
     
     def _forward(self, X_timestamp, Y_timestamp, state):
         """
@@ -87,7 +73,14 @@ class RNN(NeuralNetwork):
         Y_train: shape=(m, time_steps, vocab_length)
         """
         m, time_steps, vector_len = X_train.shape
-        self._initialize_params(X_train, Y_train)
+        _, _, vocab_len = Y_train.shape
+        self.Wax = np.random.normal(size=(vector_len, self.hidden_units))
+        self.Waa = np.random.normal(size=(self.hidden_units, self.hidden_units))
+        self.Wy = np.random.normal(size=(self.hidden_units, vocab_len))
+        self.ba = np.zeros(shape=(1, self.hidden_units))
+        self.by = np.zeros(shape=(1, vocab_len))
+        self.A_state = np.zeros(shape=(m, time_steps, self.hidden_units))
+        self.a_state = np.zeros(shape=(m, self.hidden_units))
         Y_hat = np.zeros(shape=Y_train.shape)
         for e in range(self.epochs):
             batch_loss = 0

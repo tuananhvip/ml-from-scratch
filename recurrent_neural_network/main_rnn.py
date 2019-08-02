@@ -71,4 +71,10 @@ def main(use_keras=False):
 
 
 if __name__ == "__main__":
-    main(use_keras=False)
+    import argparse
+
+    parser = argparse.ArgumentParser(description="A RNN program.")
+    parser.add_argument("--keras", action="store_true", help="Whether use keras or not.")
+
+    args = parser.parse_args()
+    main(use_keras=args.keras)

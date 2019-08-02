@@ -26,9 +26,9 @@ def main(use_keras=False):
     batch_size = 32
     learning_rate = 0.1
     if use_keras:
-        from keras.optimizers import SGD
+        from keras.optimizers import SGD as SGDKeras
         training_phase = True
-        optimizer = SGD(lr=learning_rate)
+        optimizer = SGDKeras(lr=learning_rate)
         cnn = CNNKeras(epochs=epochs, batch_size=batch_size, optimizer=optimizer, cnn_structure=arch)
     else:
         optimizer = SGD(alpha=learning_rate)
@@ -38,10 +38,12 @@ def main(use_keras=False):
     if training_phase:
         images, labels = mndata.load_training()
         images, labels = preprocess_data(images, labels, nn=True)
-        cnn.train(images, labels) 
+        
         if not use_keras:
+            cnn.train(images[:10000], labels[:10000])
             cnn.save(weight_path)
         else:
+            cnn.train(images, labels)
             training_phase = False
     if not training_phase:
         import pickle
@@ -60,4 +62,10 @@ def main(use_keras=False):
 
 
 if __name__ == "__main__":
-    main(use_keras=True)
+    import argparse
+
+    parser = argparse.ArgumentParser(description="A CNN program.")
+    parser.add_argument("--keras", action="store_true", help="Whether use keras or not.")
+
+    args = parser.parse_args()
+    main(use_keras=args.keras)

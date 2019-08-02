@@ -77,7 +77,7 @@ def load_dataset(m):
             human_vocab.update(tuple(h))
             machine_vocab.update(tuple(m))
     
-    human = dict(zip(sorted(human_vocab) + ['<unk>', '<pad>'], 
+    human = dict(zip(['<pad>', '<unk>'] + sorted(human_vocab), 
                      list(range(len(human_vocab) + 2))))
     inv_machine = dict(enumerate(sorted(machine_vocab)))
     machine = {v:k for k,v in inv_machine.items()}
@@ -89,12 +89,9 @@ def preprocess_data(dataset, human_vocab, machine_vocab, Tx, Ty):
     X, Y = zip(*dataset)
     
     X = np.array([string_to_int(i, Tx, human_vocab) for i in X])
-    Y = [string_to_int(t, Ty, machine_vocab) for t in Y]
-    
-    Xoh = np.array(list(map(lambda x: to_categorical(x, num_classes=len(human_vocab)), X)))
-    Yoh = np.array(list(map(lambda x: to_categorical(x, num_classes=len(machine_vocab)), Y)))
+    Y = np.array([string_to_int(t, Ty, machine_vocab) for t in Y])
 
-    return X, np.array(Y), Xoh, Yoh
+    return X, Y
 
 def string_to_int(string, length, vocab):
     """
@@ -193,7 +190,6 @@ def plot_attention_map(model, input_vocabulary, inv_output_vocabulary, text, n_s
     layer = model.layers[num]
 
     encoded = np.array(string_to_int(text, Tx, input_vocabulary)).reshape((1, 30))
-    encoded = np.array(list(map(lambda x: to_categorical(x, num_classes=len(input_vocabulary)), encoded)))
 
     f = K.function(model.inputs, [layer.get_output_at(t) for t in range(Ty)])
     r = f([encoded, s0, c0])

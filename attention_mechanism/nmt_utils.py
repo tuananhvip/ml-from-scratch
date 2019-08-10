@@ -84,6 +84,32 @@ def load_dataset(m):
  
     return dataset, human, machine, inv_machine
 
+def load_dataset_v2(m):
+    """
+        Loads a dataset with m examples and vocabularies
+        :m: the number of examples to generate
+    """
+    
+    human_vocab = set()
+    machine_vocab = set()
+    dataset = []
+    Tx = 30
+    
+
+    for i in tqdm(range(m)):
+        h, m, _ = load_date()
+        if h is not None:
+            dataset.append((h, "#" + m))
+            human_vocab.update(tuple(h))
+            machine_vocab.update(tuple(m))
+    
+    human = dict(zip(['<pad>', '<unk>'] + sorted(human_vocab), 
+                     list(range(len(human_vocab) + 2))))
+    inv_machine = dict(enumerate(["#"] + sorted(machine_vocab)))
+    machine = {v:k for k,v in inv_machine.items()}
+ 
+    return dataset, human, machine, inv_machine
+
 def preprocess_data(dataset, human_vocab, machine_vocab, Tx, Ty):
     
     X, Y = zip(*dataset)

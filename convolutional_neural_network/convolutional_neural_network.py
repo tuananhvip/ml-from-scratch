@@ -94,24 +94,6 @@ class CNN(NeuralNetwork):
                     layers.append(act_layer)
         return layers
 
-    def _forward(self, train_X):
-        """
-        Forward propagation all layers in convolutional neural network.
-
-        Parameters
-        ----------
-        train_X: input training image X. shape = (m, iW, iH, iC)
-
-        Returns
-        -------
-        Output value of the last layer. 
-        """
-        input_X = train_X
-        for layer in self.layers:
-            input_X = layer.forward(input_X)
-        output = input_X
-        return output
-
     def _backward(self, Y, Y_hat, X):
         """
         CNN backward propagation.

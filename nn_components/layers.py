@@ -364,7 +364,7 @@ class BatchNormLayer(Layer):
         self.momentum = momentum
         self.epsilon = epsilon
 
-    def forward(self, X):
+    def forward(self, X, prediction=False):
         """
         Compute batch norm forward.
         LINEAR -> BATCH NORM -> ACTIVATION.
@@ -376,10 +376,16 @@ class BatchNormLayer(Layer):
         if not hasattr(self, "gamma") and not hasattr(self, "beta"):
             self.gamma = np.ones(((1,) + X.shape[1:]))
             self.beta = np.zeros(((1,) + X.shape[1:]))
-            # self.mu_moving_average = np.zeros(shape=self.beta.shape)
-            # self.sigma_moving_average = np.zeros(shape=self.gamma.shape)
-        self.mu = np.mean(X, axis=0, keepdims=True)
-        self.sigma = np.std(X, axis=0, keepdims=True)    
+            self.mu_moving_average = np.zeros(shape=self.beta.shape)
+            self.sigma_moving_average = np.zeros(shape=self.gamma.shape)
+        if not prediction:
+            self.mu = np.mean(X, axis=0, keepdims=True)
+            self.sigma = np.std(X, axis=0, keepdims=True)
+            self.mu_moving_average = self.momentum*(self.mu_moving_average) + (1-self.momentum)*self.mu
+            self.sigma_moving_average = self.momentum*(self.sigma_moving_average) + (1-self.momentum)*self.sigma
+        else:
+            self.mu = self.mu_moving_average
+            self.sigma = self.sigma_moving_average    
         self.Xnorm = (X - self.mu)/np.sqrt(self.sigma + self.epsilon)
         self.output = self.gamma*self.Xnorm + self.beta
         return self.output

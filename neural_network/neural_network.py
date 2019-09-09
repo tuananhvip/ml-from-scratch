@@ -74,7 +74,7 @@ class NeuralNetwork:
         assert Y.shape == Y_hat.shape, "Unmatch shape."
         return -np.sum(np.sum(Y*np.log(Y_hat), axis=1), axis=0)/Y.shape[0]
 
-    def _forward(self, train_X):
+    def _forward(self, train_X, prediction=False):
         """
         NN forward propagation level.
 
@@ -82,6 +82,7 @@ class NeuralNetwork:
         ----------
         train_X: training dataset X.
                 shape = (N, D)
+        prediction: whether this forward pass is prediction stage or training stage.
 
         Returns
         -------
@@ -90,6 +91,9 @@ class NeuralNetwork:
         """
         inputs = train_X
         for layer in self.layers:
+            if isinstance(layer, BatchNormLayer):
+                inputs = layer.forward(inputs, prediction=prediction)
+                continue
             inputs = layer.forward(inputs)
         output = inputs
         return output
@@ -152,7 +156,7 @@ class NeuralNetwork:
         """
         Predict function.
         """
-        y_hat = self._forward(test_X)
+        y_hat = self._forward(test_X, prediction=True)
         return np.argmax(y_hat, axis=1)
 
     def save(self, name):

@@ -46,7 +46,7 @@ class RMSProp(_Optimizers):
         if self.s is None:
             self.s = np.zeros(shape=grad.shape)
         self.s = self.beta*self.s + (1-self.beta)*grad**2
-        return self.alpha * (1/(np.sqrt(self.s) + self.epsilon)) * grad
+        return self.alpha * (1/(np.sqrt(self.s + self.epsilon))) * grad
 
 class Adam(_Optimizers):
     
@@ -64,5 +64,5 @@ class Adam(_Optimizers):
             self.s = np.zeros(shape=grad.shape)
         self.v = self.beta_1*self.v + (1-self.beta_1)*grad
         self.s = self.beta_2*self.s + (1-self.beta_2)*grad**2
-        return self.alpha * (self.v / (np.sqrt(self.s) + self.epsilon))
+        return self.alpha * (self.v / (np.sqrt(self.s + self.epsilon)))
         

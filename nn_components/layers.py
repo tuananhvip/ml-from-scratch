@@ -1,4 +1,5 @@
 import numpy as np
+np.seterr(all="raise")
 from nn_components.initializations import he_initialization, xavier_initialization, standard_normal_initialization
 from nn_components.activations import relu, sigmoid, tanh, softmax, relu_grad, sigmoid_grad, tanh_grad
 
@@ -146,7 +147,6 @@ class ConvLayer(Layer):
         if self.padding == "SAME":
             X = self._pad_input(X)
             m, iW, iH, iC = X.shape
-
         self.output = np.zeros(shape=(m, oW, oH, self.filters))
         for f in range(self.filters):
             for w in range(oW):
@@ -322,7 +322,7 @@ class ActivationLayer(Layer):
                                 relu, softmax]. Softmax activation must be at the last layer.
         
         """
-        assert activation in ["sigmoid", "tanh", "relu", "softmax"], "Unknown activation."
+        assert activation in ["sigmoid", "tanh", "relu", "softmax"], "Unknown activation function: " + str(activation)
         self.activation = activation
 
     def forward(self, X):

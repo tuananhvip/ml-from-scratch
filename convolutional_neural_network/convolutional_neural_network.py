@@ -85,7 +85,7 @@ class CNN(NeuralNetwork):
                 weight_init = struct["weight_init"]
                 fc_layer = FCLayer(num_neurons=num_neurons, weight_init=weight_init)
                 layers.append(fc_layer)
-                if "batch_norm" in struct:
+                if "batch_norm" in struct: 
                     bn_layer = BatchNormLayer()
                     layers.append(bn_layer)    
                 if "activation" in struct:

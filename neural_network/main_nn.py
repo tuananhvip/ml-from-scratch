@@ -1,5 +1,6 @@
 import sys
 sys.path.append("..")
+sys.path.append("D:\ml_from_scratch")
 import os
 from optimizations_algorithms.optimizers import SGD, SGDMomentum, RMSProp, Adam
 from neural_network import NeuralNetwork
@@ -7,14 +8,14 @@ from libs.utils import load_dataset_mnist, preprocess_data
 from libs.mnist_lib import MNIST
 
 
-load_dataset_mnist("../libs")
-mndata = MNIST('../libs/data_mnist')
+load_dataset_mnist("D:/ml_from_scratch/libs")
+mndata = MNIST('D:/ml_from_scratch/libs/data_mnist')
 weight_path = "nn_weights.pickle"
 training_phase = weight_path not in os.listdir(".")
 if training_phase:
     images, labels = mndata.load_training()
     images, labels = preprocess_data(images, labels)
-    epochs = 20
+    epochs = 10
     batch_size = 64
     learning_rate = 0.1
 

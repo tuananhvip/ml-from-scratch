@@ -1,5 +1,6 @@
 import sys
 sys.path.append("..")
+sys.path.append("D:\ml_from_scratch")
 import os
 from libs.utils import load_dataset_mnist, preprocess_data
 from libs.mnist_lib import MNIST
@@ -9,8 +10,8 @@ from cnn_keras import CNNKeras
 
 
 def main(use_keras=False):
-    load_dataset_mnist("../libs")
-    mndata = MNIST('../libs/data_mnist')
+    load_dataset_mnist("D:/ml_from_scratch/libs")
+    mndata = MNIST('D:/ml_from_scratch/libs/data_mnist')
     arch = [{"type": "conv", "filter_size": (3, 3), "filters": 6, "padding": "SAME", "stride": 1, "activation": "relu", "weight_init": "he"},
             {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
             {"type": "conv", "filter_size": (3, 3), "filters": 16, "padding": "SAME", "stride": 1, "activation": "relu", "weight_init": "he"},
@@ -23,8 +24,8 @@ def main(use_keras=False):
             {"type": "fc", "num_neurons": 10, "weight_init": "he", "activation": "softmax"}
             ]
     epochs = 5
-    batch_size = 32
-    learning_rate = 0.1
+    batch_size = 64
+    learning_rate = 0.01
     if use_keras:
         print("Train MNIST dataset by CNN with Keras/Tensorflow.")
         from keras.optimizers import SGD as SGDKeras

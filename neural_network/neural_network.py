@@ -72,7 +72,7 @@ class NeuralNetwork:
         J: cross-entropy loss.
         """
         assert Y.shape == Y_hat.shape, "Unmatch shape."
-        return -np.sum(np.sum(Y*np.log(Y_hat), axis=1), axis=0)/Y.shape[0]
+        return -np.mean(np.sum(Y*np.log(Y_hat), axis=1), axis=0)
 
     def _forward(self, train_X, prediction=False):
         """
@@ -149,7 +149,7 @@ class NeuralNetwork:
                 loss = self._loss(Y_train[it:it+self.batch_size], Y_hat)
                 batch_loss += loss
                 num_batches += 1
-                pbar.set_description("Epoch " +str(e+1) + " - Loss: %.4f" % (batch_loss/num_batches))
+                pbar.set_description("Epoch " + str(e+1) + " - Loss: %.4f" % (batch_loss/num_batches))
             print("Loss at epoch %s: %f" % (e + 1 , batch_loss / num_batches))            
 
     def predict(self, test_X):

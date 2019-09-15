@@ -6,7 +6,6 @@ from libs.utils import load_dataset_mnist, preprocess_data
 from libs.mnist_lib import MNIST
 from optimizations_algorithms.optimizers import SGD, SGDMomentum, RMSProp, Adam
 from convolutional_neural_network import CNN
-from cnn_keras import CNNKeras
 
 
 def main(use_keras=False):
@@ -29,6 +28,7 @@ def main(use_keras=False):
     if use_keras:
         print("Train MNIST dataset by CNN with Keras/Tensorflow.")
         from keras.optimizers import SGD as SGDKeras
+        from cnn_keras import CNNKeras
         training_phase = True
         optimizer = SGDKeras(lr=learning_rate)
         cnn = CNNKeras(epochs=epochs, batch_size=batch_size, optimizer=optimizer, cnn_structure=arch)

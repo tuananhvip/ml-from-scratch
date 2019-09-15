@@ -103,11 +103,44 @@ class ConvLayer(Layer):
         self.weight_init = weight_init
         self.W = None
 
-    def _conv_op(self, slice_a, slice_b):
+    def _conv_op(self, input_slice, kernel):
         """
         Convolutional operation of 2 slices.
+
+        Parameters
+        ----------
+        input_slice: Input slice, shape = (m, fW, fH, in_filters)
+        kernel: Kernel shape = (fW, fH, in_filters, out_filters)
+
+        Returns
+        -------
+        output_slice shape = (m, out_filters)
         """
-        return np.sum(slice_a*slice_b, axis=(1, 2, 3))
+        return np.einsum("mijk,ijkf->mf", input_slice, kernel)
+
+    def _conv_backward_op(self, input_slice, d_prev_slice, update_params=True):
+        """
+        Convolutional backward operation of 2 slices.
+
+        Parameters
+        ----------
+        if update_params is true:
+            input_slice: Input slice, shape = (m, fW, fH, in_filters)
+        else:
+            input_slice: Kernel, shape = (fW, fH, in_filters, out_filters)
+        d_prev_slice: Derivative slice of previous layer. shape = (m, out_filters)
+
+        Returns
+        -------
+        if update_params is true:
+            Derivative with respect to W shape = (fW, fH, in_filters, out_filters)
+        else:
+            Derivative with respect to X shape = (m, fW, fH, in_filters)
+        """
+        if update_params:
+            return np.einsum("mijk,md->ijkd", input_slice, d_prev_slice)
+        else:
+            return np.einsum("ijkl,ml->mijk", input_slice, d_prev_slice)
 
     def _pad_input(self, inp):
         """
@@ -148,13 +181,11 @@ class ConvLayer(Layer):
             X = self._pad_input(X)
             m, iW, iH, iC = X.shape
         self.output = np.zeros(shape=(m, oW, oH, self.filters))
-        for f in range(self.filters):
-            for w in range(oW):
-                for h in range(oH):
-                    w_step = w*self.stride
-                    h_step = h*self.stride
-                    self.output[:, w, h, f] = self._conv_op(X[:, w_step:w_step+fW, h_step:h_step+fH, :], 
-                                                            self.W[:, :, :, f])
+        for w in range(oW):
+            for h in range(oH):
+                w_step = w*self.stride
+                h_step = h*self.stride
+                self.output[:, w, h, :] = self._conv_op(X[:, w_step:w_step+fW, h_step:h_step+fH, :], self.W)
         return self.output
 
     def backward(self, d_prev, prev_layer, optimizer):
@@ -178,16 +209,15 @@ class ConvLayer(Layer):
             X = prev_layer.copy()
         if self.padding == "SAME":
             X = self._pad_input(X)
-        for f in range(num_filts):
-            for w in range(oW):
-                for h in range(oH):
-                    w_step = w*self.stride
-                    h_step = h*self.stride
-                    d_prev_reshape = d_prev[:, w, h, f].reshape((m, 1, 1, 1))
-                    dW[:, :, :, f] += np.sum(X[:, w_step:w_step+fW, h_step:h_step+fH, :] * d_prev_reshape, axis=0)
-                    if dA_temp is None:
-                        continue
-                    dA_temp[:, w_step:w_step+fW, h_step:h_step+fH, :] += self.W[:, :, :, f] * d_prev_reshape 
+        for w in range(oW):
+            for h in range(oH):
+                w_step = w*self.stride
+                h_step = h*self.stride
+                dW = np.add(dW, self._conv_backward_op(X[:, w_step:w_step+fW, h_step:h_step+fH, :], d_prev[:, w, h, :])) 
+                if dA_temp is None:
+                    continue
+                dA_temp[:, w_step:w_step+fW, h_step:h_step+fH, :] = np.add(dA_temp[:, w_step:w_step+fW, h_step:h_step+fH, :],
+                                                                           self._conv_backward_op(self.W, d_prev[:, w, h, :], update_params=False)) 
         self.update_params(dW, optimizer)
         return dA_temp
 

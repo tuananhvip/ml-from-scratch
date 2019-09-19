@@ -66,9 +66,11 @@ class CNN(NeuralNetwork):
                 stride = struct["stride"]
                 weight_init = struct["weight_init"]
                 conv_layer = ConvLayer(filter_size, filters, padding, stride, weight_init)
+                conv_layer.initialize_optimizer(self.optimizer)
                 layers.append(conv_layer)
                 if "batch_norm" in struct:
                     bn_layer = BatchNormLayer()
+                    bn_layer.initialize_optimizer(self.optimizer)
                     layers.append(bn_layer)
                 if "activation" in struct:
                     activation = struct["activation"]
@@ -84,9 +86,11 @@ class CNN(NeuralNetwork):
                 num_neurons = struct["num_neurons"]
                 weight_init = struct["weight_init"]
                 fc_layer = FCLayer(num_neurons=num_neurons, weight_init=weight_init)
+                fc_layer.initialize_optimizer(self.optimizer)
                 layers.append(fc_layer)
                 if "batch_norm" in struct: 
                     bn_layer = BatchNormLayer()
+                    bn_layer.initialize_optimizer(self.optimizer)
                     layers.append(bn_layer)    
                 if "activation" in struct:
                     activation = struct["activation"]
@@ -110,7 +114,7 @@ class CNN(NeuralNetwork):
         dA_prev = self._backward_last(Y, Y_hat)
         for i in range(len(self.layers)-3, 0, -1):
             if isinstance(self.layers[i], (FCLayer, ConvLayer, BatchNormLayer)):
-                dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1], self.optimizer)
+                dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1])
                 continue
             dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1])
-        _ = self.layers[i-1].backward(dA_prev, X, self.optimizer)
+        _ = self.layers[i-1].backward(dA_prev, X)

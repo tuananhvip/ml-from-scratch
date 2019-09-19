@@ -1,6 +1,5 @@
 import sys
 sys.path.append("..")
-sys.path.append("D:\ml_from_scratch")
 import os
 from optimizations_algorithms.optimizers import SGD, SGDMomentum, RMSProp, Adam
 from neural_network import NeuralNetwork
@@ -8,8 +7,8 @@ from libs.utils import load_dataset_mnist, preprocess_data
 from libs.mnist_lib import MNIST
 
 
-load_dataset_mnist("D:/ml_from_scratch/libs")
-mndata = MNIST('D:/ml_from_scratch/libs/data_mnist')
+load_dataset_mnist("../libs")
+mndata = MNIST('../libs/data_mnist')
 weight_path = "nn_weights.pickle"
 training_phase = weight_path not in os.listdir(".")
 if training_phase:
@@ -17,14 +16,14 @@ if training_phase:
     images, labels = preprocess_data(images, labels)
     epochs = 10
     batch_size = 64
-    learning_rate = 0.1
+    learning_rate = 0.01
 
-    sgd = SGD(learning_rate)
+    sgd = Adam(learning_rate)
     archs = [
-        {"num_neurons": 100, "weight_init": "he", "activation": "sigmoid", "batch_norm": None},
-        {"num_neurons": 125, "weight_init": "he", "activation": "sigmoid", "batch_norm": None},
-        {"num_neurons": 50, "weight_init": "he", "activation": "sigmoid", "batch_norm": None},
-        {"num_neurons": labels.shape[1], "weight_init": "he", "activation": "softmax"}]
+        {"num_neurons": 100, "weight_init": "he_normal", "activation": "sigmoid", "batch_norm": None},
+        {"num_neurons": 125, "weight_init": "he_normal", "activation": "sigmoid", "batch_norm": None},
+        {"num_neurons": 50, "weight_init": "he_normal", "activation": "sigmoid", "batch_norm": None},
+        {"num_neurons": labels.shape[1], "weight_init": "he_normal", "activation": "softmax"}]
     nn = NeuralNetwork(epochs, batch_size, sgd, archs)
     nn.train(images, labels)
     nn.save(weight_path)

@@ -47,9 +47,11 @@ class NeuralNetwork:
             num_neurons = struct["num_neurons"]
             weight_init = struct["weight_init"]
             fc = FCLayer(num_neurons=num_neurons, weight_init=weight_init)
+            fc.initialize_optimizer(self.optimizer)
             layers.append(fc)
             if "batch_norm" in struct:
                 bn_layer = BatchNormLayer()
+                bn_layer.initialize_optimizer(self.optimizer)
                 layers.append(bn_layer)
             if "activation" in struct:
                 activation = struct["activation"]
@@ -72,6 +74,7 @@ class NeuralNetwork:
         J: cross-entropy loss.
         """
         assert Y.shape == Y_hat.shape, "Unmatch shape."
+        Y_hat[Y_hat == 0] = 1e-30
         return -np.mean(np.sum(Y*np.log(Y_hat), axis=1), axis=0)
 
     def _forward(self, train_X, prediction=False):
@@ -105,7 +108,7 @@ class NeuralNetwork:
         m = Y.shape[0]
         delta = (Y_hat - Y)/m # shape = (N, C)
         dW = self.layers[-3].output.T.dot(delta)
-        self.layers[-2].update_params(dW, self.optimizer)
+        self.layers[-2].update_params(dW)
         dA_prev = delta.dot(self.layers[-2].W.T)
         return dA_prev
 
@@ -127,8 +130,8 @@ class NeuralNetwork:
             if isinstance(self.layers[i], ActivationLayer):
                 dA_prev = self.layers[i].backward(dA_prev, None)
                 continue
-            dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1], self.optimizer)
-        _ = self.layers[i-1].backward(dA_prev, X, self.optimizer)
+            dA_prev = self.layers[i].backward(dA_prev, self.layers[i-1])
+        _ = self.layers[i-1].backward(dA_prev, X)
 
     def train(self, X_train, Y_train):
         """

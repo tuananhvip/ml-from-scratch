@@ -10,16 +10,16 @@ from convolutional_neural_network import CNN
 def main(use_keras=False):
     load_dataset_mnist("../libs")
     mndata = MNIST('../libs/data_mnist')
-    arch = [{"type": "conv", "filter_size": (3, 3), "filters": 6, "padding": "SAME", "stride": 1, "activation": "relu", "weight_init": "he"},
+    arch = [{"type": "conv", "filter_size": (3, 3), "filters": 6, "padding": "SAME", "stride": 1, "activation": "relu", "weight_init": "he_normal"},
             {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
-            {"type": "conv", "filter_size": (3, 3), "filters": 16, "padding": "SAME", "stride": 1, "activation": "relu", "weight_init": "he"},
+            {"type": "conv", "filter_size": (3, 3), "filters": 16, "padding": "SAME", "stride": 1, "activation": "relu", "weight_init": "he_normal"},
             {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
-            {"type": "conv", "filter_size": (3, 3), "filters": 32, "padding": "SAME", "stride": 1, "activation": "relu", "weight_init": "he"},
+            {"type": "conv", "filter_size": (3, 3), "filters": 32, "padding": "SAME", "stride": 1, "activation": "relu", "weight_init": "he_normal"},
             {"type": "pool", "filter_size": (2, 2), "stride": 2, "mode": "max"},
             "flatten",
-            {"type": "fc", "num_neurons": 128, "weight_init": "he", "activation": "relu"}, # use "batch_norm": None
-            {"type": "fc", "num_neurons": 64, "weight_init": "he", "activation": "relu"},
-            {"type": "fc", "num_neurons": 10, "weight_init": "he", "activation": "softmax"}
+            {"type": "fc", "num_neurons": 128, "weight_init": "he_normal", "activation": "relu"}, # use "batch_norm": None
+            {"type": "fc", "num_neurons": 64, "weight_init": "he_normal", "activation": "relu"},
+            {"type": "fc", "num_neurons": 10, "weight_init": "he_normal", "activation": "softmax"}
             ]
     epochs = 5
     batch_size = 64

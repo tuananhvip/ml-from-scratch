@@ -21,13 +21,13 @@ def relu(z):
     """
     return z*(z > 0)
 
-def softmax(z):
+def softmax(z, axis=-1):
     """
     Softmax activation function. Use at the output layer.
         g(z) = e^z / sum(e^z)
     """
-    z_prime = z - np.max(z, axis=-1, keepdims=True)
-    return np.exp(z_prime) / np.sum(np.exp(z_prime), axis=-1, keepdims=True)
+    z_prime = z - np.max(z, axis=axis, keepdims=True)
+    return np.exp(z_prime) / np.sum(np.exp(z_prime), axis=axis, keepdims=True)
 
 def sigmoid_grad(z):
     """

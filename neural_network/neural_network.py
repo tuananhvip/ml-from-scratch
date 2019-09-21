@@ -74,7 +74,6 @@ class NeuralNetwork:
         J: cross-entropy loss.
         """
         assert Y.shape == Y_hat.shape, "Unmatch shape."
-        Y_hat[Y_hat == 0] = 1e-30
         return -np.mean(np.sum(Y*np.log(Y_hat), axis=1), axis=0)
 
     def _forward(self, train_X, prediction=False):

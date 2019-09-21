@@ -18,13 +18,13 @@ if training_phase:
     batch_size = 64
     learning_rate = 0.01
 
-    sgd = Adam(learning_rate)
+    optimizer = Adam(learning_rate)
     archs = [
         {"num_neurons": 100, "weight_init": "he_normal", "activation": "sigmoid", "batch_norm": None},
         {"num_neurons": 125, "weight_init": "he_normal", "activation": "sigmoid", "batch_norm": None},
         {"num_neurons": 50, "weight_init": "he_normal", "activation": "sigmoid", "batch_norm": None},
         {"num_neurons": labels.shape[1], "weight_init": "he_normal", "activation": "softmax"}]
-    nn = NeuralNetwork(epochs, batch_size, sgd, archs)
+    nn = NeuralNetwork(epochs, batch_size, optimizer, archs)
     nn.train(images, labels)
     nn.save(weight_path)
 else:

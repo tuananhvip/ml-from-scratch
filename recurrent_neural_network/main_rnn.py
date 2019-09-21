@@ -1,6 +1,7 @@
 import sys
 sys.path.append("..")
-from recurrent_neural_network import RNN
+sys.path.append("D:/ml_from_scratch/")
+from recurrent_neural_network import RecurrentNeuralNetwork
 import numpy as np
 from keras.utils.np_utils import to_categorical
 from optimizations_algorithms.optimizers import SGD
@@ -11,7 +12,9 @@ def main(use_keras=False):
     start_token = " "
     pad_token = "#"
 
-    with open("names") as f:
+    data_path = "D:/ml_from_scratch/recurrent_neural_network/names"
+
+    with open(data_path) as f:
         names = f.read()[:-1].split('\n')
         names = [start_token + name for name in names]
     print('number of samples:', len(names))
@@ -66,7 +69,7 @@ def main(use_keras=False):
         rnn = RNNKeras(hidden_units=64, epochs=epochs, optimizer=optimizer, batch_size=batch_size)
     else:
         optimizer = SGD(alpha=learning_rate)
-        rnn = RNN(hidden_units=64, epochs=epochs, optimizer=optimizer, batch_size=batch_size)
+        rnn = RecurrentNeuralNetwork(hidden_units=64, epochs=epochs, optimizer=optimizer, batch_size=batch_size)
     rnn.train(train_X, train_Y)
 
 

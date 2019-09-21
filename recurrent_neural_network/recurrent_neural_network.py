@@ -2,16 +2,15 @@
 Author: Giang Tran
 Email: giangtran240896@gmail.com
 Docs: https://giangtranml.github.io/ml/machine-learning/recurrent-neural-network
+Note: not correctly implemented yet!
 """
-
-import sys
+from nn_components.activations import softmax, tanh, tanh_grad
 from neural_network.neural_network import NeuralNetwork
-from nn_components.activations import softmax, tanh, sigmoid, tanh_grad
 import numpy as np
 from tqdm import tqdm
-from optimizations_algorithms.optimizers import SGD
 
-class RNN(NeuralNetwork):
+
+class RecurrentNeuralNetwork:
 
     def __init__(self, hidden_units, epochs, optimizer, batch_size):
         """
@@ -20,16 +19,36 @@ class RNN(NeuralNetwork):
         self.hidden_units = hidden_units
         self.optimizer = optimizer
         self.epochs = epochs
-        self.batch_size = batch_size    
-    
-    def _forward(self, X_timestamp, Y_timestamp, state):
+        self.batch_size = batch_size
+
+    def _loss(self, Y, Y_hat):
+        """
+        Loss function for many to many RNN.
+
+        Parameters
+        ----------
+        Y: one-hot encoding label tensor. shape = (N, T, C)
+        Y_hat: output at each time step. shape = (N, T, C)
+        """
+        return -np.mean(np.sum(Y*np.log(Y_hat), axis=(1, 2)))
+
+    def _forward(self, X):
         """
         RNN forward propagation.
+
+        Parameters
+        ----------
+        X: time series input, shape = (N, T, D)
         """
-        state = tanh(X_timestamp.dot(self.Wax) + state.dot(self.Waa) + self.ba)
-        Y_hat_timestamp = sigmoid(state.dot(self.Wy) + self.by)
-        loss = self._loss(Y_timestamp, Y_hat_timestamp)
-        return loss, Y_hat_timestamp, state
+        m, timesteps, _ = X.shape
+        self.h0 = np.zeros(shape=(m, self.hidden_units))
+        self.states = np.zeros(shape=(m, timesteps, self.hidden_units))
+        self.states[:, 0, :] = tanh(np.dot(X[:, 0, :], self.Wax) + np.dot(self.h0, self.Waa) + self.ba)
+        for t in range(1, timesteps):
+            self.states[:, t, :] = tanh(np.dot(X[:, t, :], self.Wax) + np.dot(self.states[:, t-1, :], self.Waa) + self.ba)
+        Y_hat = np.einsum("nth,hc->ntc", self.states, self.Wy)
+        Y_hat = softmax(Y_hat + self.by)
+        return Y_hat
 
     def _backward(self, X_train, Y_train, Y_hat):
         """
@@ -38,13 +57,16 @@ class RNN(NeuralNetwork):
         Y_hat: shape=(m, time_steps, vocab_length)
         """
         m, time_steps, vector_len = X_train.shape
-        dWy = np.zeros(shape=self.Wy.shape)
-        dby = np.zeros(shape=self.by.shape)
         dWaa = np.zeros(shape=self.Waa.shape)
         dWax = np.zeros(shape=self.Wax.shape)
         dba = np.zeros(shape=self.ba.shape)
         dA_chain = np.zeros(shape=self.A_state.shape)
         da_state = np.zeros(shape=self.a_state.shape)
+
+        delta = (Y_hat - Y_train)/m
+        dWy = np.einsum("ntc,nth->hc", delta, self.states)
+        dby = np.sum(delta, axis=(0, 1))
+
         for t in range(time_steps):
             # Compute dA[t] respect to dA[t-1]
             dA_chain[:, t, :] = tanh_grad(self.A_state[:, t, :]).dot(self.Waa.T)
@@ -79,23 +101,16 @@ class RNN(NeuralNetwork):
         self.Wy = np.random.normal(size=(self.hidden_units, vocab_len))
         self.ba = np.zeros(shape=(1, self.hidden_units))
         self.by = np.zeros(shape=(1, vocab_len))
-        self.A_state = np.zeros(shape=(m, time_steps, self.hidden_units))
-        self.a_state = np.zeros(shape=(m, self.hidden_units))
         Y_hat = np.zeros(shape=Y_train.shape)
         for e in range(self.epochs):
             batch_loss = 0
             num_batches = 0
             pbar = tqdm(range(0, X_train.shape[0], self.batch_size), desc="Epoch " + str(e+1))
             for it in pbar:
-                total_timesteps_loss = 0
-                for t in range(time_steps):
-                    state = self.a_state if t == 0 else self.A_state[:, t-1, :]
-                    loss_t, Y_hat_t, A_state_t = self._forward(X_train[:, t, :], Y_train[:, t, :], state)
-                    total_timesteps_loss += loss_t
-                    Y_hat[:, t, :] = Y_hat_t
-                    self.A_state[:, t, :] = A_state_t
-                self._backward(X_train, Y_train, Y_hat)
-                batch_loss += total_timesteps_loss
+                Y_hat = self._forward(X_train[it:it+self.batch_size])
+                loss = self._loss(Y_train[it:it+self.batch_size], Y_hat)
+                self._backward(X_train[it:it+self.batch_size], Y_train[it:it+self.batch_size], Y_hat)
+                batch_loss += loss
                 num_batches += 1
                 pbar.set_description("Epoch " +str(e+1) + " - Loss: %.4f" % (batch_loss/num_batches))
             print("Loss at epoch %s: %f" % (e + 1 , batch_loss / num_batches))

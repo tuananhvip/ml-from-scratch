@@ -50,9 +50,10 @@ class FCLayer(Layer):
         Parameters
         ----------
         num_neurons: (integer) number of neurons in the layer.     
-        weight_init: (string) either `he` initialization, `xavier` initialization or standard normal distribution.
+        weight_init: (string) either `he_normal`, `xavier_normal`, `he_uniform`, `xavier_uniform` or standard normal distribution.
         """
-        assert weight_init in ["std", "he_normal", "xavier_normal", "he_uniform", "xavier_uniform"], "Weight initialization must be in either `he` or `xavier` or `std`."
+        assert weight_init in ["std", "he_normal", "xavier_normal", "he_uniform", "xavier_uniform"],\
+                "Unknow weight initialization type."
         self.num_neurons = num_neurons
         self.weight_init = weight_init
         self.output = None
@@ -117,10 +118,11 @@ class ConvLayer(CNNLayer):
         padding: use padding to keep output dimension = input dimension .
                     either 'SAME' or 'VALID'.
         stride: stride of the filters.
-        weight_init: (string) either `he` initialization, `xavier` initialization or `std` standard normal distribution.
+        weight_init: (string) either `he_normal`, `xavier_normal`, `he_uniform`, `xavier_uniform` or standard normal distribution.
         """
         assert len(filter_size) == 2, "Filter size must be a 2-elements tuple (width, height)."
-        assert weight_init in ["he", "xavier", "std"], "Weight initialization must be in either `he` or `xavier` or `std`."
+        assert weight_init in ["std", "he_normal", "xavier_normal", "he_uniform", "xavier_uniform"],\
+                     "Unknow weight initialization type."
         self.filter_size = filter_size
         self.filters = filters
         self.padding = padding

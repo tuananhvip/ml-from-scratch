@@ -2,9 +2,9 @@ import numpy as np
 import keras
 L = keras.layers
 M = keras.models
-from recurrent_neural_network import RNN
+from recurrent_neural_network import RecurrentNeuralNetwork
 
-class RNNKeras(RNN):
+class RNNKeras(RecurrentNeuralNetwork):
 
    def train(self, X_train, Y_train):
         """

@@ -1,3 +1,8 @@
-How to run CNN?
+# Convolutional Neural Network from scratch
 
-python main_cnn.py 
+### How to run CNN?
+
+`python main_cnn.py `
+options:
+  --keras: use keras instead.
+  --test: run the test cases for my CNN.
